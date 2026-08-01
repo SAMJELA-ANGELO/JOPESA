@@ -1,4 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://jopesa-backend.onrender.com' || 'http://localhost:3000';
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || 'https://jopesa-backend.onrender.com'
+).replace(/\/$/, '');
 
 export function getApiBase() {
   return API_BASE;
@@ -58,7 +60,10 @@ export async function apiFetch<T = unknown>(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  // Ensure path always has a leading slash
+  const formattedPath = path.startsWith('/') ? path : `/${path}`;
+
+  const response = await fetch(`${API_BASE}${formattedPath}`, {
     ...options,
     headers,
     cache: 'no-store',
@@ -81,14 +86,23 @@ export async function apiFetch<T = unknown>(
 
 export function unwrapList<T>(payload: unknown): T[] {
   if (Array.isArray(payload)) return payload as T[];
-  if (payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown }).data)) {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    Array.isArray((payload as { data?: unknown }).data)
+  ) {
     return (payload as { data: T[] }).data;
   }
   return [];
 }
 
-export function eventImages(event: { image?: string | null; images?: string[] | null }): string[] {
-  const fromArray = Array.isArray(event.images) ? event.images.filter(Boolean) : [];
+export function eventImages(event: {
+  image?: string | null;
+  images?: string[] | null;
+}): string[] {
+  const fromArray = Array.isArray(event.images)
+    ? event.images.filter(Boolean)
+    : [];
   if (fromArray.length > 0) return Array.from(new Set(fromArray));
   if (event.image) return [event.image];
   return [];
@@ -113,3 +127,4 @@ export function formatDateRange(start?: string | null, end?: string | null) {
   }
   return startLabel || endLabel || '';
 }
+
