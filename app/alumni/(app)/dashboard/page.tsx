@@ -115,29 +115,39 @@ export default function AlumniDashboardPage() {
   const eventCover = (eventId: string) => photos.find((photo) => photo.eventId === eventId)?.url;
 
   if (loading) {
-    return <div style={{ color: 'var(--gray)', fontWeight: 600 }}>Loading your dashboard...</div>;
+    return (
+      <div className="dashboard-loading">
+        <div className="loading-spinner" />
+        <span>Loading your dashboard...</span>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>Welcome back</h1>
-        <p style={{ margin: '6px 0 0', color: 'var(--gray)', fontSize: 14 }}>
-          Explore events, announcements, documents, and more from the JOPESA alumni network.
-        </p>
+    <div className="animate-float-in">
+      <div className="page-header page-header-dashboard">
+        <div className="page-header-icon">
+          <CalendarDays size={32} />
+        </div>
+        <div>
+          <h1 className="page-header-title">Welcome back</h1>
+          <p className="page-header-subtitle">
+            Explore events, announcements, documents, and more from the JOPESA alumni network
+          </p>
+        </div>
       </div>
 
       {error && (
-        <div className="alumni-card" style={{ marginBottom: 16, color: 'var(--err)' }}>
+        <div className="alumni-card animate-float-in" style={{ marginBottom: 16, color: 'var(--err)' }}>
           {error}
         </div>
       )}
 
-      <section style={{ marginBottom: 28 }}>
+      <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-1">
         <PhotoCarousel slides={carouselSlides} />
       </section>
 
-      <section style={{ marginBottom: 28 }}>
+      <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-2">
         <SectionHeader
           title="Upcoming events"
           subtitle="Register and stay connected with campus reunions"
@@ -147,12 +157,12 @@ export default function AlumniDashboardPage() {
           <div className="alumni-card">No upcoming events right now. Check back soon.</div>
         ) : (
           <div className="alumni-grid-2">
-            {upcomingEvents.map((event) => {
+            {upcomingEvents.map((event, index) => {
               const cover = eventCover(event.id);
               return (
                 <div
                   key={event.id}
-                  className="alumni-card clickable"
+                  className={`alumni-card clickable animate-float-in animate-delay-${Math.min(index + 3, 5)}`}
                   onClick={() => router.push(`/alumni/events/${event.id}`)}
                   style={{ padding: 0, overflow: 'hidden' }}
                 >
@@ -192,16 +202,16 @@ export default function AlumniDashboardPage() {
         )}
       </section>
 
-      <section style={{ marginBottom: 28 }}>
+      <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-3">
         <SectionHeader title="Announcements" subtitle="Pinned updates and community news" href="/alumni/announcements" />
         {pinnedOrRecentNews.length === 0 ? (
           <div className="alumni-card">No announcements yet.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {pinnedOrRecentNews.map((item) => (
+            {pinnedOrRecentNews.map((item, index) => (
               <div
                 key={item.id}
-                className="alumni-card clickable"
+                className={`alumni-card clickable animate-float-in animate-delay-${Math.min(index + 4, 5)}`}
                 onClick={() => router.push(`/alumni/announcements/${item.id}`)}
                 style={{ display: 'flex', gap: 14, alignItems: 'center' }}
               >
@@ -247,14 +257,18 @@ export default function AlumniDashboardPage() {
         )}
       </section>
 
-      <section style={{ marginBottom: 28 }}>
+      <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-4">
         <SectionHeader title="Documents" subtitle="Downloadable resources for alumni" href="/alumni/documents" />
         {documents.length === 0 ? (
           <div className="alumni-card">No documents available yet.</div>
         ) : (
           <div className="alumni-grid-3">
-            {documents.slice(0, 6).map((doc) => (
-              <div key={doc.id} className="alumni-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {documents.slice(0, 6).map((doc, index) => (
+              <div 
+                key={doc.id} 
+                className={`alumni-card animate-float-in animate-delay-${Math.min(index + 5, 5)}`}
+                style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+              >
                 <div
                   className="clickable"
                   onClick={() => router.push(`/alumni/documents/${doc.id}`)}
@@ -295,10 +309,10 @@ export default function AlumniDashboardPage() {
         )}
       </section>
 
-      <section style={{ marginBottom: 12 }}>
+      <section style={{ marginBottom: 12 }} className="animate-float-in animate-delay-5">
         <SectionHeader title="Explore more" subtitle="Everything the alumni platform offers" />
         <div className="alumni-grid-3">
-          <Link href="/alumni/gallery" className="alumni-card clickable" style={{ textDecoration: 'none', display: 'block' }}>
+          <Link href="/alumni/gallery" className="alumni-card clickable animate-float-in animate-delay-1" style={{ textDecoration: 'none', display: 'block' }}>
             <Images size={22} color="var(--navy)" />
             <div style={{ fontWeight: 800, color: 'var(--navy)', marginTop: 10 }}>Photo Gallery</div>
             <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 4 }}>
@@ -307,14 +321,14 @@ export default function AlumniDashboardPage() {
                 : 'Browse and download event photos'}
             </div>
           </Link>
-          <Link href="/alumni/batch-finder" className="alumni-card clickable" style={{ textDecoration: 'none', display: 'block' }}>
+          <Link href="/alumni/batch-finder" className="alumni-card clickable animate-float-in animate-delay-2" style={{ textDecoration: 'none', display: 'block' }}>
             <Search size={22} color="var(--navy)" />
             <div style={{ fontWeight: 800, color: 'var(--navy)', marginTop: 10 }}>Batch Finder</div>
             <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 4 }}>
               Discover your batch and graduation year
             </div>
           </Link>
-          <Link href="/alumni/chapters" className="alumni-card clickable" style={{ textDecoration: 'none', display: 'block' }}>
+          <Link href="/alumni/chapters" className="alumni-card clickable animate-float-in animate-delay-3" style={{ textDecoration: 'none', display: 'block' }}>
             <Building2 size={22} color="var(--navy)" />
             <div style={{ fontWeight: 800, color: 'var(--navy)', marginTop: 10 }}>Chapters</div>
             <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 4 }}>

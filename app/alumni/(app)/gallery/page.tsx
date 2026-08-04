@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Images } from 'lucide-react';
+import { Download, Images, CheckSquare, Square, Trash2 } from 'lucide-react';
 import { Photo } from '@/types';
 import { apiFetch, unwrapList } from '@/lib/api';
 import { downloadFile } from '@/lib/download';
@@ -10,6 +10,7 @@ import { downloadFile } from '@/lib/download';
 export default function AlumniGalleryPage() {
   const router = useRouter();
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -33,75 +34,190 @@ export default function AlumniGalleryPage() {
     load();
   }, []);
 
-  return (
-    <div>
-      <h1 style={{ margin: '0 0 6px', fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>Gallery</h1>
-      <p style={{ margin: '0 0 22px', color: 'var(--gray)', fontSize: 14 }}>
-        Photos uploaded from the admin Photos tab. Click a photo to open its event.
-      </p>
+  const togglePhotoSelection = (photoId: string) => {
+    setSelectedPhotos((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(photoId)) {
+        newSet.delete(photoId);
+      } else {
+        newSet.add(photoId);
+      }
+      return newSet;
+    });
+  };
 
-      {loading && <div style={{ color: 'var(--gray)' }}>Loading gallery...</div>}
-      {error && <div className="alumni-card" style={{ color: 'var(--err)' }}>{error}</div>}
+  const selectAllPhotos = () => {
+    setSelectedPhotos(new Set(photos.map((photo) => photo.id)));
+  };
+
+  const deselectAllPhotos = () => {
+    setSelectedPhotos(new Set());
+  };
+
+  const downloadSelectedPhotos = () => {
+    selectedPhotos.forEach((photoId) => {
+      const photo = photos.find((p) => p.id === photoId);
+      if (photo) {
+        const title = photo.event?.title || photo.eventTitle || 'Event media';
+        const isVideo = /\.(mp4|mov|webm|m4v|avi|mkv|ogg|3gp)(\?.*)?$/i.test(photo.url) || photo.url.includes('/video/');
+        const fileExt = isVideo ? 'mp4' : 'jpg';
+        downloadFile(photo.url, `${title}.${fileExt}`);
+      }
+    });
+  };
+
+  const downloadAllPhotos = () => {
+    photos.forEach((photo) => {
+      const title = photo.event?.title || photo.eventTitle || 'Event media';
+      const isVideo = /\.(mp4|mov|webm|m4v|avi|mkv|ogg|3gp)(\?.*)?$/i.test(photo.url) || photo.url.includes('/video/');
+      const fileExt = isVideo ? 'mp4' : 'jpg';
+      downloadFile(photo.url, `${title}.${fileExt}`);
+    });
+  };
+
+  return (
+    <div className="gallery-page">
+      <div className="page-header">
+        <div className="page-header-icon">
+          <Images size={32} />
+        </div>
+        <div>
+          <h1 className="page-header-title">Gallery</h1>
+          <p className="page-header-subtitle">
+            Media uploaded from the admin Photos tab. Click a media item to open its event
+          </p>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="gallery-loading">
+          <div className="loading-spinner" />
+          <span>Loading gallery...</span>
+        </div>
+      )}
+      
+      {error && (
+        <div className="gallery-error">
+          <Images size={24} />
+          <span>{error}</span>
+        </div>
+      )}
+      
       {!loading && !error && photos.length === 0 && (
-        <div className="alumni-card" style={{ textAlign: 'center', padding: 40 }}>
-          <Images size={36} color="var(--navy)" style={{ marginBottom: 10 }} />
-          <div style={{ fontWeight: 700, color: 'var(--navy)' }}>No photos yet</div>
-          <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 6 }}>
-            Photos will appear here after admins upload them from the Photos section.
+        <div className="gallery-empty">
+          <div className="gallery-empty-icon">
+            <Images size={48} />
           </div>
+          <h3>No photos yet</h3>
+          <p>Photos will appear here after admins upload them from the Photos section.</p>
         </div>
       )}
 
-      <div className="alumni-gallery-grid">
-        {photos.map((photo) => {
-          const title = photo.event?.title || photo.eventTitle || 'Event photo';
-          return (
-            <div
-              key={photo.id}
-              style={{
-                position: 'relative',
-                borderRadius: 14,
-                overflow: 'hidden',
-                background: '#fff',
-                boxShadow: '0 3px 18px rgba(0,43,107,.1)',
-              }}
-            >
-              <img
-                src={photo.url}
-                alt={title}
-                onClick={() => router.push(`/alumni/events/${photo.eventId}`)}
-                style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block', cursor: 'pointer' }}
-              />
-              <div style={{ padding: '10px 12px 12px' }}>
-                <div
-                  onClick={() => router.push(`/alumni/events/${photo.eventId}`)}
-                  style={{ fontWeight: 700, color: 'var(--navy)', fontSize: 13, cursor: 'pointer', marginBottom: 8 }}
-                >
-                  {title}
-                </div>
-                <button
-                  onClick={() => downloadFile(photo.url, `${title}.jpg`)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    border: '1px solid var(--lgray)',
-                    background: 'var(--off)',
-                    color: 'var(--navy)',
-                    borderRadius: 8,
-                    padding: '6px 8px',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Download size={13} /> Download
-                </button>
-              </div>
+      {!loading && !error && photos.length > 0 && (
+        <>
+          {/* Selection Controls */}
+          <div className="gallery-controls">
+            <div className="gallery-selection-info">
+              {selectedPhotos.size > 0 && (
+                <span className="gallery-selected-count">
+                  {selectedPhotos.size} selected
+                </span>
+              )}
             </div>
-          );
-        })}
-      </div>
+            <div className="gallery-actions">
+              <button
+                onClick={selectAllPhotos}
+                className="gallery-action-btn"
+                disabled={selectedPhotos.size === photos.length}
+              >
+                <CheckSquare size={16} /> Select All
+              </button>
+              <button
+                onClick={deselectAllPhotos}
+                className="gallery-action-btn"
+                disabled={selectedPhotos.size === 0}
+              >
+                <Square size={16} /> Deselect All
+              </button>
+              <button
+                onClick={downloadSelectedPhotos}
+                className="gallery-action-btn gallery-action-btn-primary"
+                disabled={selectedPhotos.size === 0}
+              >
+                <Download size={16} /> Download Selected
+              </button>
+              <button
+                onClick={downloadAllPhotos}
+                className="gallery-action-btn gallery-action-btn-primary"
+              >
+                <Download size={16} /> Download All
+              </button>
+            </div>
+          </div>
+
+          <div className="gallery-grid">
+            {photos.map((photo) => {
+              const title = photo.event?.title || photo.eventTitle || 'Event media';
+              const isVideo = /\.(mp4|mov|webm|m4v|avi|mkv|ogg|3gp)(\?.*)?$/i.test(photo.url) || photo.url.includes('/video/');
+              const fileExt = isVideo ? 'mp4' : 'jpg';
+              const isSelected = selectedPhotos.has(photo.id);
+              
+              return (
+                <div
+                  key={photo.id}
+                  className={`gallery-item ${isSelected ? 'gallery-item-selected' : ''}`}
+                >
+                  <div className="gallery-item-checkbox">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePhotoSelection(photo.id);
+                      }}
+                      className="gallery-checkbox-btn"
+                    >
+                      {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                    </button>
+                  </div>
+                  
+                  {isVideo ? (
+                    <video
+                      src={photo.url}
+                      controls
+                      onClick={() => router.push(`/alumni/events/${photo.eventId}`)}
+                      className="gallery-media"
+                    />
+                  ) : (
+                    <img
+                      src={photo.url}
+                      alt={title}
+                      onClick={() => router.push(`/alumni/events/${photo.eventId}`)}
+                      className="gallery-media"
+                    />
+                  )}
+                  
+                  <div className="gallery-item-info">
+                    <div
+                      onClick={() => router.push(`/alumni/events/${photo.eventId}`)}
+                      className="gallery-item-title"
+                    >
+                      {title}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadFile(photo.url, `${title}.${fileExt}`);
+                      }}
+                      className="gallery-download-btn"
+                    >
+                      <Download size={14} /> Download
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

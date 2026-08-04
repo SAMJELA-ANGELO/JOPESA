@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { AlertTriangle, Star, Search } from 'lucide-react';
+import { AlertTriangle, Star, Search, Calendar, GraduationCap, Clock } from 'lucide-react';
 import { getBatchInfo, maxClass, updateYearHint, CLASS_NAMES, SY } from '@/lib/batchUtils';
 import { BatchInfo } from '@/types';
 
@@ -59,24 +59,31 @@ export default function AlumniBatchFinderPage() {
   };
 
   return (
-    <div>
-      <h1 className="alumni-page-title">Batch Finder</h1>
-      <p className="alumni-page-sub">
-        Enter your year of entry and class to calculate your JOPESA batch and graduation year.
-      </p>
+    <div className="batch-finder-page">
+      <div className="batch-finder-header">
+        <div className="batch-finder-icon">
+          <Search size={32} />
+        </div>
+        <div>
+          <h1 className="batch-finder-title">Batch Finder</h1>
+          <p className="batch-finder-subtitle">
+            Enter your year of entry and class to calculate your JOPESA batch and graduation year
+          </p>
+        </div>
+      </div>
 
-      <div className="alumni-grid-2" style={{ alignItems: 'start' }}>
-        <form className="alumni-card alumni-form" onSubmit={calcBatch}>
-          <div className="alumni-form-banner">
-            <Search size={18} />
+      <div className="batch-finder-layout">
+        <form className="batch-finder-form" onSubmit={calcBatch}>
+          <div className="batch-finder-form-header">
+            <Calendar size={20} />
             <span>Calculate your batch</span>
           </div>
 
-          <div className="alumni-field">
-            <label className="alumni-label">Academic year of entry</label>
+          <div className="batch-finder-field">
+            <label className="batch-finder-label">Academic year of entry</label>
             <input
               type="number"
-              className="alumni-input"
+              className="batch-finder-input"
               value={yIn}
               onChange={(e) => {
                 setYIn(e.target.value);
@@ -86,14 +93,14 @@ export default function AlumniBatchFinderPage() {
               placeholder="e.g. 2008 (means 2008/2009)"
               min={2007}
             />
-            <div className="alumni-field-hint">{updateYearHint(yIn)}</div>
+            <div className="batch-finder-hint">{updateYearHint(yIn)}</div>
           </div>
 
-          <div className="alumni-field">
-            <label className="alumni-label">Class at entry</label>
-            <div className="alumni-select-wrap">
+          <div className="batch-finder-field">
+            <label className="batch-finder-label">Class at entry</label>
+            <div className="batch-finder-select-wrap">
               <select
-                className="alumni-input"
+                className="batch-finder-input"
                 value={cIn}
                 onChange={(e) => {
                   setCIn(e.target.value === '' ? '' : parseInt(e.target.value));
@@ -113,47 +120,68 @@ export default function AlumniBatchFinderPage() {
             </div>
           </div>
 
-          <button type="submit" className="alumni-btn alumni-btn-primary" style={{ width: '100%' }}>
+          <button type="submit" className="batch-finder-button">
+            <Search size={18} />
             Calculate my batch
           </button>
 
           {finderError && (
-            <div className="alumni-form-error" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-              <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+            <div className="batch-finder-error">
+              <AlertTriangle size={18} />
               <span>{finderError}</span>
             </div>
           )}
 
           {result && (
-            <div className="alumni-result-panel">
-              <div className="alumni-result-label">Your batch</div>
-              <div className="alumni-result-batch">Batch {result.batch}</div>
-              <div className="alumni-result-grid">
+            <div className="batch-finder-result">
+              <div className="batch-finder-result-header">
+                <GraduationCap size={24} />
                 <div>
-                  <div className="alumni-result-k">Entry year</div>
-                  <div className="alumni-result-v">{result.acadYear}</div>
+                  <div className="batch-finder-result-label">Your batch</div>
+                  <div className="batch-finder-result-batch">Batch {result.batch}</div>
                 </div>
-                <div>
-                  <div className="alumni-result-k">Class entered</div>
-                  <div className="alumni-result-v">{result.className}</div>
+              </div>
+              
+              <div className="batch-finder-result-grid">
+                <div className="batch-finder-result-item">
+                  <Calendar size={16} />
+                  <div>
+                    <div className="batch-finder-result-k">Entry year</div>
+                    <div className="batch-finder-result-v">{result.acadYear}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="alumni-result-k">Graduation</div>
-                  <div className="alumni-result-v">{result.gradYear}</div>
+                <div className="batch-finder-result-item">
+                  <GraduationCap size={16} />
+                  <div>
+                    <div className="batch-finder-result-k">Class entered</div>
+                    <div className="batch-finder-result-v">{result.className}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="alumni-result-k">Years left</div>
-                  <div className="alumni-result-v">
-                    {result.yrsLeft} yr{result.yrsLeft === 1 ? '' : 's'}
+                <div className="batch-finder-result-item">
+                  <Calendar size={16} />
+                  <div>
+                    <div className="batch-finder-result-k">Graduation</div>
+                    <div className="batch-finder-result-v">{result.gradYear}</div>
+                  </div>
+                </div>
+                <div className="batch-finder-result-item">
+                  <Clock size={16} />
+                  <div>
+                    <div className="batch-finder-result-k">Years left</div>
+                    <div className="batch-finder-result-v">
+                      {result.yrsLeft} yr{result.yrsLeft === 1 ? '' : 's'}
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="alumni-result-f1">
-                <Star size={14} />
+              
+              <div className="batch-finder-result-f1">
+                <Star size={16} />
                 <span>Batch Form 1 year: <strong>{result.f1AcadYear}</strong></span>
               </div>
+              
               {typeof cIn === 'number' && cIn > 1 && (
-                <div className="alumni-result-note">
+                <div className="batch-finder-result-note">
                   You entered in {result.className}. Your batch matches those who entered Form 1 in {result.f1AcadYear}.
                 </div>
               )}
@@ -161,10 +189,13 @@ export default function AlumniBatchFinderPage() {
           )}
         </form>
 
-        <div className="alumni-card">
-          <div className="alumni-section-title">Quick reference (Form 1 entries)</div>
-          <div className="alumni-table-wrap">
-            <table className="alumni-table">
+        <div className="batch-finder-reference">
+          <div className="batch-finder-reference-header">
+            <Calendar size={20} />
+            <h3>Quick reference (Form 1 entries)</h3>
+          </div>
+          <div className="batch-finder-table-wrap">
+            <table className="batch-finder-table">
               <thead>
                 <tr>
                   <th>Entry year</th>

@@ -4,6 +4,7 @@ import { useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { LoaderCircle, X, ClipboardList } from 'lucide-react';
 import { FormField } from '@/types';
 import { apiFetch, getApiBase, getAlumniToken } from '@/lib/api';
+import { useEffect } from 'react';
 
 interface EventRegistrationModalProps {
   open: boolean;
@@ -37,10 +38,39 @@ export default function EventRegistrationModal({
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(false);
 
   const sortedFields = useMemo(() => fields || [], [fields]);
 
-  if (!open) return null;
+  useEffect(() => {
+    let mounted = true;
+    const loadExisting = async () => {
+      setLoadingExisting(true);
+      try {
+        const token = getAlumniToken();
+        if (!token) return;
+        const res = await fetch(`${getApiBase()}/events/${eventId}/registration/me`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (!res.ok) return;
+        const payload = await res.json().catch(() => ({}));
+        if (!mounted) return;
+        // payload may contain `responses` object
+        if (payload && typeof payload === 'object' && (payload.responses || payload.data)) {
+          const existing = (payload.responses || payload.data || payload) as Record<string, unknown>;
+          setValues(existing);
+        }
+      } catch (err) {
+        // ignore
+      } finally {
+        setLoadingExisting(false);
+      }
+    };
+
+    if (open) loadExisting();
+
+    return () => { mounted = false; };
+  }, [open, eventId]);
 
   const setValue = (id: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [id]: value }));
@@ -118,6 +148,8 @@ export default function EventRegistrationModal({
       setSubmitting(false);
     }
   };
+
+  if (!open) return null;
 
   return (
     <div className="alumni-modal-backdrop" onClick={onClose}>

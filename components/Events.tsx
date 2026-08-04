@@ -81,40 +81,59 @@ export default function Events({ events }: EventsProps) {
                   <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--lgray)' }}>
                     <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--navy)', marginBottom: '12px' }}>Photos ({eventPhotos.length})</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px' }}>
-                      {eventPhotos.map((photo, index) => (
-                        <div key={photo.id} style={{ position: 'relative' }}>
-                          <img 
-                            src={photo.url} 
-                            alt={`Event photo ${index + 1}`} 
-                            style={{ 
-                              width: '100%', 
-                              height: '100px', 
-                              objectFit: 'cover', 
-                              borderRadius: '6px',
-                              cursor: 'pointer'
-                            }}
-                            onClick={() => setSelectedPhoto(photo.url)}
-                          />
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDownload(photo.url, index); }}
-                            style={{
-                              position: 'absolute',
-                              bottom: '4px',
-                              right: '4px',
-                              background: 'rgba(0,0,0,0.7)',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '4px 6px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center'
-                            }}
-                          >
-                            <Download size={10} />
-                          </button>
-                        </div>
-                      ))}
+                      {eventPhotos.map((photo, index) => {
+                        const isVideo = /\.(mp4|mov|webm|m4v|avi|mkv|ogg|3gp)(\?.*)?$/i.test(photo.url) || photo.url.includes('/video/');
+                        return (
+                          <div key={photo.id} style={{ position: 'relative' }}>
+                            {isVideo ? (
+                              <video
+                                src={photo.url}
+                                controls
+                                style={{
+                                  width: '100%',
+                                  height: '100px',
+                                  objectFit: 'cover',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  background: '#000'
+                                }}
+                                onClick={() => setSelectedPhoto(photo.url)}
+                              />
+                            ) : (
+                              <img 
+                                src={photo.url} 
+                                alt={`Event photo ${index + 1}`} 
+                                style={{ 
+                                  width: '100%', 
+                                  height: '100px', 
+                                  objectFit: 'cover', 
+                                  borderRadius: '6px',
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => setSelectedPhoto(photo.url)}
+                              />
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDownload(photo.url, index); }}
+                              style={{
+                                position: 'absolute',
+                                bottom: '4px',
+                                right: '4px',
+                                background: 'rgba(0,0,0,0.7)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '4px 6px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <Download size={10} />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

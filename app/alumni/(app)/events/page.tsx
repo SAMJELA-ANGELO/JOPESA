@@ -31,66 +31,81 @@ export default function AlumniEventsPage() {
   }, []);
 
   return (
-    <div>
-      <h1 style={{ margin: '0 0 6px', fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>Events</h1>
-      <p style={{ margin: '0 0 22px', color: 'var(--gray)', fontSize: 14 }}>
-        Browse reunions, gatherings, and alumni programs. Click an event to view details and register.
-      </p>
+    <div className="events-page">
+      <div className="page-header">
+        <div className="page-header-icon">
+          <CalendarDays size={32} />
+        </div>
+        <div>
+          <h1 className="page-header-title">Events</h1>
+          <p className="page-header-subtitle">
+            Browse reunions, gatherings, and alumni programs. Click an event to view details and register
+          </p>
+        </div>
+      </div>
 
-      {loading && <div style={{ color: 'var(--gray)' }}>Loading events...</div>}
-      {error && <div className="alumni-card" style={{ color: 'var(--err)' }}>{error}</div>}
-
-      {!loading && !error && events.length === 0 && (
-        <div className="alumni-card">No published events yet.</div>
+      {loading && (
+        <div className="events-loading">
+          <div className="loading-spinner" />
+          <span>Loading events...</span>
+        </div>
+      )}
+      
+      {error && (
+        <div className="events-error">
+          <CalendarDays size={24} />
+          <span>{error}</span>
+        </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {!loading && !error && events.length === 0 && (
+        <div className="events-empty">
+          <div className="events-empty-icon">
+            <CalendarDays size={48} />
+          </div>
+          <h3>No published events yet</h3>
+          <p>Check back later for upcoming reunions and gatherings.</p>
+        </div>
+      )}
+
+      <div className="events-list">
         {events.map((event) => {
           const cover = eventImages(event)[0];
           const attendees = event._count?.attendees;
           return (
             <div
               key={event.id}
-              className="alumni-card clickable"
+              className="event-card"
               onClick={() => router.push(`/alumni/events/${event.id}`)}
-              style={{ display: 'flex', gap: 16, padding: 0, overflow: 'hidden' }}
             >
-              {cover ? (
-                <img src={cover} alt={event.title} style={{ width: 160, minHeight: 120, objectFit: 'cover', flexShrink: 0 }} />
-              ) : (
-                <div
-                  style={{
-                    width: 160,
-                    minHeight: 120,
-                    background: 'linear-gradient(135deg, var(--navy), var(--navy2))',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--gold2)',
-                    flexShrink: 0,
-                  }}
-                >
-                  <CalendarDays size={28} />
+              <div className="event-card-header">
+                {cover ? (
+                  <img src={cover} alt={event.title} className="event-card-image" />
+                ) : (
+                  <div className="event-card-image-placeholder">
+                    <CalendarDays size={32} />
+                  </div>
+                )}
+                <div className="event-card-date-badge">
+                  <CalendarDays size={12} />
+                  <span>{formatDateRange(event.startDate, event.endDate)}</span>
                 </div>
-              )}
-              <div style={{ padding: '16px 16px 16px 0', minWidth: 0, flex: 1 }}>
-                <div style={{ fontWeight: 800, color: 'var(--navy)', fontSize: 17, marginBottom: 8 }}>
-                  {event.title}
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              </div>
+              <div className="event-card-body">
+                <h3 className="event-card-title">{event.title}</h3>
+                <p className="event-card-description">
                   {event.description}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 12, color: 'var(--gray)' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <CalendarDays size={13} /> {formatDateRange(event.startDate, event.endDate)}
-                  </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <MapPin size={13} /> {event.location || 'TBA'}
-                  </span>
+                </p>
+                <div className="event-card-footer">
+                  <div className="event-card-location">
+                    <MapPin size={14} />
+                    <span>{event.location || 'TBA'}</span>
+                  </div>
                   {typeof attendees === 'number' && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <Users size={13} /> {attendees} registered
-                    </span>
+                    <div className="event-card-attendees">
+                      <Users size={14} />
+                      <span>{attendees}</span>
+                    </div>
                   )}
                 </div>
               </div>

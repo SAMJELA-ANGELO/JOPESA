@@ -76,10 +76,15 @@ export default function AlumniSidebar({ open, onClose }: AlumniSidebarProps) {
           boxShadow: '4px 0 24px rgba(0,43,107,0.25)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, padding: '0 6px' }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--gold2)', letterSpacing: 0.6 }}>JOPESA</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>Alumni Portal</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 28, padding: '0 6px' }}>
+          <img 
+            src="/logo.png" 
+            alt="JOPESA Logo" 
+            style={{ width: '56px', height: '56px', borderRadius: '50%', border: '2px solid var(--gold)', objectFit: 'cover' }}
+          />
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--gold2)', letterSpacing: '0.8px', margin: 0 }}>JOPESA</h1>
+            <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>Alumni Portal</div>
           </div>
           <button
             onClick={onClose}

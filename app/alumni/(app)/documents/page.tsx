@@ -36,15 +36,42 @@ export default function AlumniDocumentsPage() {
   }, []);
 
   return (
-    <div>
-      <h1 style={{ margin: '0 0 6px', fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>Documents</h1>
-      <p style={{ margin: '0 0 22px', color: 'var(--gray)', fontSize: 14 }}>
-        Access and download shared alumni resources.
-      </p>
+    <div className="documents-page">
+      <div className="page-header">
+        <div className="page-header-icon">
+          <FileText size={32} />
+        </div>
+        <div>
+          <h1 className="page-header-title">Documents</h1>
+          <p className="page-header-subtitle">
+            Access and download shared alumni resources
+          </p>
+        </div>
+      </div>
 
-      {loading && <div style={{ color: 'var(--gray)' }}>Loading documents...</div>}
-      {error && <div className="alumni-card" style={{ color: 'var(--err)' }}>{error}</div>}
-      {!loading && !error && documents.length === 0 && <div className="alumni-card">No documents available.</div>}
+      {loading && (
+        <div className="documents-loading">
+          <div className="loading-spinner" />
+          <span>Loading documents...</span>
+        </div>
+      )}
+      
+      {error && (
+        <div className="documents-error">
+          <FileText size={24} />
+          <span>{error}</span>
+        </div>
+      )}
+      
+      {!loading && !error && documents.length === 0 && (
+        <div className="documents-empty">
+          <div className="documents-empty-icon">
+            <FileText size={48} />
+          </div>
+          <h3>No documents available</h3>
+          <p>Documents will appear here once shared by the administrator.</p>
+        </div>
+      )}
 
       <div className="alumni-grid-2">
         {documents.map((doc) => (

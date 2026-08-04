@@ -47,10 +47,11 @@ const DonutChart = ({ data, size = 180, strokeWidth = 16 }: { data: Array<{ labe
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState<'overview' | 'events' | 'announcements' | 'documents' | 'branches' | 'photos' | 'batches' | 'statistics'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'events' | 'announcements' | 'documents' | 'branches' | 'photos' | 'batches' | 'statistics' | 'registrations'>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [registrations, setRegistrations] = useState<Array<any>>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -68,7 +69,9 @@ export default function AdminDashboard() {
   const [isSavingBranch, setIsSavingBranch] = useState(false);
   const [isSavingBatch, setIsSavingBatch] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'warning' | 'error' }>({ show: false, message: '', type: 'success' });
-  const [deleteModal, setDeleteModal] = useState<{ open: boolean; title: string; message: string; type: 'event' | 'announcement' | 'branch' | 'document' | 'photo' | 'batch' | null; id: string | null; loading: boolean }>({ open: false, title: '', message: '', type: null, id: null, loading: false });
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; title: string; message: string; type: 'event' | 'announcement' | 'branch' | 'document' | 'photo' | 'batch' | 'registration' | null; id: string | null; loading: boolean }>({ open: false, title: '', message: '', type: null, id: null, loading: false });
+  const [branchStatsModal, setBranchStatsModal] = useState(false);
+  const [batchStatsModal, setBatchStatsModal] = useState(false);
 
   // Event management
   const [showEventForm, setShowEventForm] = useState(false);
@@ -155,6 +158,11 @@ export default function AdminDashboard() {
     if (Array.isArray(value.data)) return value.data;
     if (Array.isArray(value)) return value;
     return Array.isArray(value.items) ? value.items : [];
+  };
+
+  const isVideoMediaUrl = (value?: string) => {
+    if (!value) return false;
+    return /\.(mp4|mov|webm|m4v|avi|mkv|ogg|3gp)(\?.*)?$/i.test(value) || value.includes('/video/');
   };
 
   const branchStats = branches.map((branch) => {
@@ -419,6 +427,19 @@ export default function AdminDashboard() {
               : '',
           }));
           setPhotos(normalizedPhotos);
+          // Fetch admin registrations (payments) if the endpoint exists
+          try {
+            const regsRes = await fetch(`${apiBaseUrl}/admin/registrations?skip=0&take=200`, { headers });
+            if (regsRes.ok) {
+              const regsJson = await regsRes.json();
+              const list = Array.isArray(regsJson?.data) ? regsJson.data : Array.isArray(regsJson) ? regsJson : [];
+              setRegistrations(list);
+            } else {
+              setRegistrations([]);
+            }
+          } catch (e) {
+            setRegistrations([]);
+          }
         } else {
           setPhotos([]);
         }
@@ -509,7 +530,7 @@ export default function AdminDashboard() {
     setToast({ show: true, message, type });
   };
 
-  const openDeleteModal = (type: 'event' | 'announcement' | 'branch' | 'document' | 'photo' | 'batch', id: string, title: string, message: string) => {
+  const openDeleteModal = (type: 'event' | 'announcement' | 'branch' | 'document' | 'photo' | 'batch' | 'registration', id: string, title: string, message: string) => {
     setDeleteModal({ open: true, title, message, type, id, loading: false });
   };
 
@@ -685,6 +706,15 @@ export default function AdminDashboard() {
           setBatches(prev => prev.filter(batch => batch.id !== deleteModal.id));
           break;
         }
+        case 'registration': {
+          const response = await fetch(`${apiBaseUrl}/admin/registrations/${deleteModal.id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(adminToken),
+          });
+          if (!response.ok && response.status !== 204) throw new Error('Unable to delete registration');
+          setRegistrations(prev => prev.filter((reg) => reg.id !== deleteModal.id));
+          break;
+        }
       }
       closeDeleteModal();
     } catch (error) {
@@ -692,6 +722,27 @@ export default function AdminDashboard() {
       showToastMessage('The selected item could not be deleted. Please try again.', 'error');
     } finally {
       setDeleteModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleUpdateRegistrationStatus = async (registrationId: string, status: 'PENDING' | 'APPROVED' | 'FLAGGED' | 'DECLINED') => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/admin/registrations/${registrationId}/status`, {
+        method: 'PUT',
+        headers: getAuthHeaders(adminToken),
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Unable to update registration status');
+      }
+
+      const updatedRegistration = await response.json();
+      setRegistrations((prev) => prev.map((reg) => (reg.id === registrationId ? updatedRegistration : reg)));
+      showToastMessage(`Registration status updated to ${status.toLowerCase()}.`, 'success');
+    } catch (error) {
+      console.error('Registration status update failed:', error);
+      showToastMessage('Could not update registration status. Please try again.', 'error');
     }
   };
 
@@ -717,7 +768,7 @@ export default function AdminDashboard() {
         .filter(Boolean);
 
       if (urls.length === 0) {
-        throw new Error('No image URLs returned from Cloudinary');
+        throw new Error('No media URLs returned from Cloudinary');
       }
 
       const response = await fetch(`${apiBaseUrl}/photos/bulk`, {
@@ -1051,7 +1102,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: 'var(--off)' }}>
+    <div className="animate-float-in" style={{ minHeight: '100vh', display: 'flex', background: 'var(--off)' }}>
       <Toast show={toast.show} message={toast.message} type={toast.type} />
 
       {deleteModal.open && (
@@ -1156,6 +1207,12 @@ export default function AdminDashboard() {
             <ImageIcon size={18} /> Photos
           </button>
           <button
+            onClick={() => { setActiveSection('registrations'); setSidebarOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'registrations' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'registrations' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
+          >
+            <UserPlus size={18} /> Registrations
+          </button>
+     <button
             onClick={() => { setActiveSection('statistics'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'statistics' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'statistics' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
@@ -1210,234 +1267,376 @@ export default function AdminDashboard() {
         </div>
 
         {activeSection === 'statistics' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="card" style={{ padding: '24px', background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88))', color: '#e2e8f0', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#f8fafc' }}>Member Statistics</div>
-                  <div style={{ fontSize: 12, color: '#cbd5e1', marginTop: 4 }}>Track alumni, branches, batches and overall participation</div>
-                </div>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <button onClick={() => exportData('xls')} style={{ padding: '10px 14px', border: '1px solid rgba(148, 163, 184, 0.4)', borderRadius: '8px', background: 'rgba(15, 23, 42, 0.8)', color: '#f8fafc', fontWeight: 700, cursor: 'pointer' }}>Export Excel</button>
-                  <button onClick={() => exportData('json')} style={{ padding: '10px 14px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, var(--gold), #f59e0b)', color: 'var(--navy)', fontWeight: 800, cursor: 'pointer' }}>Export JSON</button>
-                </div>
+          <div className="admin-statistics-page">
+            {/* Header Section */}
+            <div className="admin-stats-header">
+              <div>
+                <h1 className="admin-stats-title">Member Statistics</h1>
+                <p className="admin-stats-subtitle">Track alumni, branches, batches and overall participation</p>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+              <div className="admin-stats-actions">
+                <button onClick={() => exportData('xls')} className="admin-stats-btn admin-stats-btn-secondary">
+                  Export Excel
+                </button>
+                <button onClick={() => exportData('json')} className="admin-stats-btn admin-stats-btn-primary">
+                  Export JSON
+                </button>
+              </div>
+            </div>
+
+            {/* Filters Section */}
+            <div className="admin-stats-filters">
+              <div className="admin-filter-group">
                 <input
                   type="text"
                   value={statisticsFilters.search}
                   onChange={(e) => setStatisticsFilters((prev) => ({ ...prev, search: e.target.value }))}
                   placeholder="Search alumni by name or email"
-                  style={{ flex: '1 1 220px', padding: '12px 14px', border: '1px solid rgba(148, 163, 184, 0.35)', borderRadius: '10px', fontSize: '14px', minWidth: 200, background: 'rgba(15, 23, 42, 0.6)', color: '#f8fafc' }}
+                  className="admin-filter-input"
                 />
+              </div>
+              <div className="admin-filter-group">
                 <select
                   value={statisticsFilters.branchId}
                   onChange={(e) => setStatisticsFilters((prev) => ({ ...prev, branchId: e.target.value }))}
-                  style={{ flex: '1 1 180px', padding: '12px 14px', border: '1px solid rgba(148, 163, 184, 0.35)', borderRadius: '10px', fontSize: '14px', minWidth: 180, background: 'rgba(15, 23, 42, 0.6)', color: '#f8fafc' }}
+                  className="admin-filter-select"
                 >
-                  <option value="all" style={{ color: '#0f172a' }}>All branches</option>
+                  <option value="all">All branches</option>
                   {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id} style={{ color: '#0f172a' }}>{branch.name}</option>
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
                   ))}
                 </select>
+              </div>
+              <div className="admin-filter-group">
                 <select
                   value={statisticsFilters.batchId}
                   onChange={(e) => setStatisticsFilters((prev) => ({ ...prev, batchId: e.target.value }))}
-                  style={{ flex: '1 1 180px', padding: '12px 14px', border: '1px solid rgba(148, 163, 184, 0.35)', borderRadius: '10px', fontSize: '14px', minWidth: 180, background: 'rgba(15, 23, 42, 0.6)', color: '#f8fafc' }}
+                  className="admin-filter-select"
                 >
-                  <option value="all" style={{ color: '#0f172a' }}>All batches</option>
+                  <option value="all">All batches</option>
                   {batches.map((batch) => (
-                    <option key={batch.id} value={batch.id} style={{ color: '#0f172a' }}>{batch.name || `Batch ${batch.year}`}</option>
+                    <option key={batch.id} value={batch.id}>{batch.name || `Batch ${batch.year}`}</option>
                   ))}
                 </select>
+              </div>
+              <div className="admin-filter-group">
                 <select
                   value={statisticsFilters.role}
                   onChange={(e) => setStatisticsFilters((prev) => ({ ...prev, role: e.target.value }))}
-                  style={{ flex: '1 1 180px', padding: '12px 14px', border: '1px solid rgba(148, 163, 184, 0.35)', borderRadius: '10px', fontSize: '14px', minWidth: 180, background: 'rgba(15, 23, 42, 0.6)', color: '#f8fafc' }}
+                  className="admin-filter-select"
                 >
-                  <option value="all" style={{ color: '#0f172a' }}>All roles</option>
-                  <option value="member" style={{ color: '#0f172a' }}>Alumni</option>
-                  <option value="branch_leader" style={{ color: '#0f172a' }}>Branch leaders</option>
-                  <option value="admin" style={{ color: '#0f172a' }}>Admins</option>
+                  <option value="all">All roles</option>
+                  <option value="member">Alumni</option>
+                  <option value="branch_leader">Branch leaders</option>
+                  <option value="admin">Admins</option>
                 </select>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <input type="date" value={dateRange.start} onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))} style={{ flex: '1 1 170px', padding: '12px 14px', border: '1px solid rgba(148, 163, 184, 0.35)', borderRadius: '10px', background: 'rgba(15, 23, 42, 0.6)', color: '#f8fafc' }} />
-                  <input type="date" value={dateRange.end} onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))} style={{ flex: '1 1 170px', padding: '12px 14px', border: '1px solid rgba(148, 163, 184, 0.35)', borderRadius: '10px', background: 'rgba(15, 23, 42, 0.6)', color: '#f8fafc' }} />
-                </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
-                <div className="stat-cell" style={{ background: 'rgba(15, 23, 42, 0.7)', borderColor: 'rgba(148, 163, 184, 0.25)' }}><div className="stat-num" style={{ color: '#f8fafc' }}>{statsSummary.totalAlumni}</div><div className="stat-lbl" style={{ color: '#cbd5e1' }}>Alumni</div></div>
-                <div className="stat-cell" style={{ background: 'rgba(15, 23, 42, 0.7)', borderColor: 'rgba(148, 163, 184, 0.25)' }}><div className="stat-num" style={{ color: '#f8fafc' }}>{statsSummary.totalLeaders}</div><div className="stat-lbl" style={{ color: '#cbd5e1' }}>Leaders</div></div>
-                <div className="stat-cell" style={{ background: 'rgba(15, 23, 42, 0.7)', borderColor: 'rgba(148, 163, 184, 0.25)' }}><div className="stat-num" style={{ color: '#f8fafc' }}>{statsSummary.totalAdmins}</div><div className="stat-lbl" style={{ color: '#cbd5e1' }}>Admins</div></div>
-                <div className="stat-cell" style={{ background: 'rgba(15, 23, 42, 0.7)', borderColor: 'rgba(148, 163, 184, 0.25)' }}><div className="stat-num" style={{ color: '#f8fafc' }}>{statsSummary.totalBranches}</div><div className="stat-lbl" style={{ color: '#cbd5e1' }}>Branches</div></div>
-                <div className="stat-cell" style={{ background: 'rgba(15, 23, 42, 0.7)', borderColor: 'rgba(148, 163, 184, 0.25)' }}><div className="stat-num" style={{ color: '#f8fafc' }}>{statsSummary.totalBatches}</div><div className="stat-lbl" style={{ color: '#cbd5e1' }}>Batches</div></div>
-                <div className="stat-cell" style={{ background: 'rgba(15, 23, 42, 0.7)', borderColor: 'rgba(148, 163, 184, 0.25)' }}><div className="stat-num" style={{ color: '#f8fafc' }}>{filteredEventsByDate.length}</div><div className="stat-lbl" style={{ color: '#cbd5e1' }}>Events</div></div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-              <div className="card" style={{ padding: '24px', background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88))', color: '#e2e8f0', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }}>Engagement trend</div>
-                <div style={{ display: 'flex', alignItems: 'end', gap: '10px', height: '140px', paddingTop: '10px' }}>
-                  {engagementTrend.map((item) => {
-                    const maxValue = Math.max(...engagementTrend.map((entry) => entry.value), 1);
-                    const height = `${Math.max((item.value / maxValue) * 100, 12)}%`;
-                    return (
-                      <div key={item.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'end', justifyContent: 'center' }}>
-                          <div style={{ width: '100%', maxWidth: '42px', height, background: 'linear-gradient(180deg, #f9c74f, #7dd3fc)', borderRadius: '8px 8px 0 0', boxShadow: '0 10px 20px rgba(39, 52, 102, 0.12)' }} />
-                        </div>
-                        <div style={{ fontSize: 11, color: '#cbd5e1' }}>{item.label}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="card" style={{ padding: '24px', background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88))', color: '#e2e8f0', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }}>Role mix</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
-                  <DonutChart data={roleDistribution} size={160} strokeWidth={18} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {roleDistribution.map((entry) => {
-                    const pct = statsSummary.totalUsers ? (entry.value / statsSummary.totalUsers) * 100 : 0;
-                    return (
-                      <div key={entry.label}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '12px', color: '#cbd5e1' }}>
-                          <span>{entry.label}</span>
-                          <span>{entry.value}</span>
-                        </div>
-                        <div style={{ background: 'rgba(148, 163, 184, 0.18)', height: '10px', borderRadius: '999px', overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg, ${entry.color}, #cbd5e1)`, borderRadius: '999px' }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="admin-filter-group admin-filter-date">
+                <input 
+                  type="date" 
+                  value={dateRange.start} 
+                  onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))} 
+                  className="admin-filter-input"
+                />
+                <input 
+                  type="date" 
+                  value={dateRange.end} 
+                  onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))} 
+                  className="admin-filter-input"
+                />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
-              <div className="card" style={{ padding: '24px', background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88))', color: '#e2e8f0', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }}>Top branches</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Key Metrics */}
+            <div className="admin-stats-metrics">
+              <div className="admin-metric-card admin-metric-card-primary">
+                <div className="admin-metric-icon">
+                  <Users size={24} />
+                </div>
+                <div className="admin-metric-content">
+                  <div className="admin-metric-value">{statsSummary.totalAlumni}</div>
+                  <div className="admin-metric-label">Alumni</div>
+                </div>
+              </div>
+              <div className="admin-metric-card admin-metric-card-secondary">
+                <div className="admin-metric-icon">
+                  <Shield size={24} />
+                </div>
+                <div className="admin-metric-content">
+                  <div className="admin-metric-value">{statsSummary.totalLeaders}</div>
+                  <div className="admin-metric-label">Leaders</div>
+                </div>
+              </div>
+              <div className="admin-metric-card admin-metric-card-tertiary">
+                <div className="admin-metric-icon">
+                  <Shield size={24} />
+                </div>
+                <div className="admin-metric-content">
+                  <div className="admin-metric-value">{statsSummary.totalAdmins}</div>
+                  <div className="admin-metric-label">Admins</div>
+                </div>
+              </div>
+              <div className="admin-metric-card admin-metric-card-quaternary">
+                <div className="admin-metric-icon">
+                  <Building2 size={24} />
+                </div>
+                <div className="admin-metric-content">
+                  <div className="admin-metric-value">{statsSummary.totalBranches}</div>
+                  <div className="admin-metric-label">Branches</div>
+                </div>
+              </div>
+              <div className="admin-metric-card admin-metric-card-quinary">
+                <div className="admin-metric-icon">
+                  <GraduationCap size={24} />
+                </div>
+                <div className="admin-metric-content">
+                  <div className="admin-metric-value">{statsSummary.totalBatches}</div>
+                  <div className="admin-metric-label">Batches</div>
+                </div>
+              </div>
+              <div className="admin-metric-card admin-metric-card-senary">
+                <div className="admin-metric-icon">
+                  <Calendar size={24} />
+                </div>
+                <div className="admin-metric-content">
+                  <div className="admin-metric-value">{filteredEventsByDate.length}</div>
+                  <div className="admin-metric-label">Events</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Charts Section */}
+            <div className="admin-stats-charts">
+              <div className="admin-chart-card">
+                <div className="admin-chart-header">
+                  <h3>Engagement Trend</h3>
+                  <div className="admin-chart-badge">Monthly</div>
+                </div>
+                <div className="admin-chart-content">
+                  <div className="admin-bar-chart">
+                    {engagementTrend.map((item) => {
+                      const maxValue = Math.max(...engagementTrend.map((entry) => entry.value), 1);
+                      const height = `${Math.max((item.value / maxValue) * 100, 8)}%`;
+                      return (
+                        <div key={item.label} className="admin-bar-item">
+                          <div className="admin-bar-container">
+                            <div 
+                              className="admin-bar" 
+                              style={{ height }}
+                            />
+                          </div>
+                          <div className="admin-bar-label">{item.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-chart-card">
+                <div className="admin-chart-header">
+                  <h3>Role Distribution</h3>
+                  <div className="admin-chart-badge">Users</div>
+                </div>
+                <div className="admin-chart-content admin-chart-content-centered">
+                  <div className="admin-donut-chart">
+                    <DonutChart data={roleDistribution} size={180} strokeWidth={20} />
+                  </div>
+                  <div className="admin-legend">
+                    {roleDistribution.map((entry) => {
+                      const pct = statsSummary.totalUsers ? (entry.value / statsSummary.totalUsers) * 100 : 0;
+                      return (
+                        <div key={entry.label} className="admin-legend-item">
+                          <div className="admin-legend-color" style={{ background: entry.color }} />
+                          <div className="admin-legend-info">
+                            <span className="admin-legend-label">{entry.label}</span>
+                            <span className="admin-legend-value">{entry.value} ({pct.toFixed(1)}%)</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Rankings Section */}
+            <div className="admin-stats-rankings">
+              <div className="admin-ranking-card">
+                <div className="admin-ranking-header">
+                  <h3>Top Branches</h3>
+                  <Building2 size={20} />
+                </div>
+                <div className="admin-ranking-list">
                   {branchRanking.map((branch, index) => (
-                    <div key={branch.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '10px', background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #f9c74f, #7dd3fc)', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>{index + 1}</div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: '#f8fafc' }}>{branch.name}</div>
-                          <div style={{ fontSize: 11, color: '#cbd5e1' }}>{branch.region || 'Regional branch'}</div>
-                        </div>
+                    <div key={branch.id} className="admin-ranking-item">
+                      <div className="admin-ranking-rank">
+                        {index + 1}
                       </div>
-                      <div style={{ fontWeight: 800, color: '#f8fafc' }}>{branch.usersCount}</div>
+                      <div className="admin-ranking-info">
+                        <div className="admin-ranking-name">{branch.name}</div>
+                        <div className="admin-ranking-detail">{branch.region || 'Regional branch'}</div>
+                      </div>
+                      <div className="admin-ranking-count">{branch.usersCount}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="card" style={{ padding: '24px', background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88))', color: '#e2e8f0', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }}>Top batches</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="admin-ranking-card">
+                <div className="admin-ranking-header">
+                  <h3>Top Batches</h3>
+                  <GraduationCap size={20} />
+                </div>
+                <div className="admin-ranking-list">
                   {batchRanking.map((batch, index) => (
-                    <div key={batch.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '10px', background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #34d399, #7dd3fc)', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>{index + 1}</div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: '#f8fafc' }}>{batch.name || `Batch ${batch.year}`}</div>
-                          <div style={{ fontSize: 11, color: '#cbd5e1' }}>{batch.season || 'Batch record'}</div>
-                        </div>
+                    <div key={batch.id} className="admin-ranking-item">
+                      <div className="admin-ranking-rank admin-ranking-rank-secondary">
+                        {index + 1}
                       </div>
-                      <div style={{ fontWeight: 800, color: '#f8fafc' }}>{batch.eventCount}</div>
+                      <div className="admin-ranking-info">
+                        <div className="admin-ranking-name">{batch.name || `Batch ${batch.year}`}</div>
+                        <div className="admin-ranking-detail">{batch.season || 'Batch record'}</div>
+                      </div>
+                      <div className="admin-ranking-count">{batch.eventCount}</div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
-              <div className="card" style={{ padding: '24px', background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88))', color: '#e2e8f0', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }}>Branch statistics</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                  {branchStats.map((branch) => (
-                    <div key={branch.id} style={{ padding: '18px', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '12px', background: 'rgba(15, 23, 42, 0.7)' }}>
-                      <div style={{ fontWeight: 800, color: '#f8fafc', fontSize: 16 }}>{branch.name}</div>
-                      <div style={{ fontSize: 12, color: '#cbd5e1', marginBottom: 14 }}>{branch.region || 'No region set'}</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
-                        <div>
-                          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#cbd5e1' }}>Users</div>
-                          <div style={{ fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>{branch.usersCount}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#cbd5e1' }}>Alumni</div>
-                          <div style={{ fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>{branch.alumniCount}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#cbd5e1' }}>Leaders</div>
-                          <div style={{ fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>{branch.leaderCount}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+            {/* Detailed Statistics Buttons */}
+            <div className="admin-stats-detailed-buttons">
+              <button 
+                onClick={() => setBranchStatsModal(true)}
+                className="admin-stats-detail-btn"
+              >
+                <Building2 size={20} />
+                <div>
+                  <h3>Branch Statistics</h3>
+                  <p>View detailed branch metrics</p>
                 </div>
-              </div>
-
-              <div className="card" style={{ padding: '24px', background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88))', color: '#e2e8f0', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }}>Batch statistics</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                  {batchStats.map((batch) => (
-                    <div key={batch.id} style={{ padding: '18px', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '12px', background: 'rgba(15, 23, 42, 0.7)' }}>
-                      <div style={{ fontWeight: 800, color: '#f8fafc', fontSize: 16 }}>{batch.name || `Batch ${batch.year}`}</div>
-                      <div style={{ fontSize: 12, color: '#cbd5e1', marginBottom: 14 }}>{batch.season || 'Batch record'}</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                        <div>
-                          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#cbd5e1' }}>Events</div>
-                          <div style={{ fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>{batch.eventCount}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#cbd5e1' }}>Year</div>
-                          <div style={{ fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>{batch.year || '—'}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              </button>
+              <button 
+                onClick={() => setBatchStatsModal(true)}
+                className="admin-stats-detail-btn"
+              >
+                <GraduationCap size={20} />
+                <div>
+                  <h3>Batch Statistics</h3>
+                  <p>View detailed batch metrics</p>
                 </div>
-              </div>
+              </button>
             </div>
 
-            <div className="card" style={{ padding: '24px', background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.88))', color: '#e2e8f0', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#f8fafc' }}>Filtered alumni</div>
-                <div style={{ fontSize: 12, color: '#cbd5e1' }}>{filteredUsers.length} record(s)</div>
+            <div className="admin-stats-table-card">
+              <div className="admin-stats-table-header">
+                <h3>Filtered Alumni</h3>
+                <span className="admin-stats-table-count">{filteredUsers.length} records</span>
               </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', color: '#e2e8f0' }}>
+              <div className="admin-stats-table-wrapper">
+                <table className="admin-stats-table">
                   <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', color: '#cbd5e1' }}>
-                      <th style={{ padding: '10px 8px' }}>Name</th>
-                      <th style={{ padding: '10px 8px' }}>Email</th>
-                      <th style={{ padding: '10px 8px' }}>Role</th>
-                      <th style={{ padding: '10px 8px' }}>Branch</th>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Branch</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.length > 0 ? filteredUsers.map((user) => (
-                      <tr key={user.id} style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.12)' }}>
-                        <td style={{ padding: '10px 8px', color: '#f8fafc', fontWeight: 600 }}>{user.name}</td>
-                        <td style={{ padding: '10px 8px', color: '#cbd5e1' }}>{user.email}</td>
-                        <td style={{ padding: '10px 8px', color: '#f8fafc' }}>{user.role}</td>
-                        <td style={{ padding: '10px 8px', color: '#cbd5e1' }}>{branches.find((branch) => branch.id === user.branchId)?.name || 'Unassigned'}</td>
+                      <tr key={user.id}>
+                        <td className="admin-table-name">{user.name}</td>
+                        <td className="admin-table-email">{user.email}</td>
+                        <td className="admin-table-role">{user.role}</td>
+                        <td className="admin-table-branch">{branches.find((branch) => branch.id === user.branchId)?.name || 'Unassigned'}</td>
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={4} style={{ padding: '22px 8px', textAlign: 'center', color: '#cbd5e1' }}>No alumni match the selected filters.</td>
+                        <td colSpan={4} className="admin-table-empty">No alumni match the selected filters.</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
+
+            {/* Branch Statistics Modal */}
+            {branchStatsModal && (
+              <div className="admin-modal-overlay" onClick={() => setBranchStatsModal(false)}>
+                <div className="admin-modal-content" onClick={(e) => e.stopPropagation()}>
+                  <div className="admin-modal-header">
+                    <h3>Branch Statistics</h3>
+                    <button onClick={() => setBranchStatsModal(false)} className="admin-modal-close">
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="admin-modal-body">
+                    <div className="admin-detailed-grid">
+                      {branchStats.map((branch) => (
+                        <div key={branch.id} className="admin-detailed-item">
+                          <div className="admin-detailed-item-header">
+                            <h4>{branch.name}</h4>
+                            <span>{branch.region || 'No region set'}</span>
+                          </div>
+                          <div className="admin-detailed-stats">
+                            <div className="admin-detailed-stat">
+                              <span className="admin-detailed-stat-label">Users</span>
+                              <span className="admin-detailed-stat-value">{branch.usersCount}</span>
+                            </div>
+                            <div className="admin-detailed-stat">
+                              <span className="admin-detailed-stat-label">Alumni</span>
+                              <span className="admin-detailed-stat-value">{branch.alumniCount}</span>
+                            </div>
+                            <div className="admin-detailed-stat">
+                              <span className="admin-detailed-stat-label">Leaders</span>
+                              <span className="admin-detailed-stat-value">{branch.leaderCount}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Batch Statistics Modal */}
+            {batchStatsModal && (
+              <div className="admin-modal-overlay" onClick={() => setBatchStatsModal(false)}>
+                <div className="admin-modal-content" onClick={(e) => e.stopPropagation()}>
+                  <div className="admin-modal-header">
+                    <h3>Batch Statistics</h3>
+                    <button onClick={() => setBatchStatsModal(false)} className="admin-modal-close">
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="admin-modal-body">
+                    <div className="admin-detailed-grid">
+                      {batchStats.map((batch) => (
+                        <div key={batch.id} className="admin-detailed-item">
+                          <div className="admin-detailed-item-header">
+                            <h4>{batch.name || `Batch ${batch.year}`}</h4>
+                            <span>{batch.season || 'Batch record'}</span>
+                          </div>
+                          <div className="admin-detailed-stats admin-detailed-stats-pair">
+                            <div className="admin-detailed-stat">
+                              <span className="admin-detailed-stat-label">Events</span>
+                              <span className="admin-detailed-stat-value">{batch.eventCount}</span>
+                            </div>
+                            <div className="admin-detailed-stat">
+                              <span className="admin-detailed-stat-label">Year</span>
+                              <span className="admin-detailed-stat-value">{batch.year || '—'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2010,7 +2209,7 @@ export default function AdminDashboard() {
                 <div className="fg">
                   <label>Photos & Videos *</label>
                   <input type="file" multiple accept="image/*,video/*" onChange={(e) => handlePhotoSelection(e.target.files)} style={{ width: '100%', padding: '15px 16px', border: '2px solid var(--lgray)', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit' }} />
-                  <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>Accepted: JPG, PNG, GIF, WebP, MP4, MOV, AVI</div>
+                  <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>Accepted: JPG, PNG, GIF, WebP, MP4, MOV, AVI, up to 5 GB per file</div>
                 </div>
                 {photoPreviewUrls.length > 0 && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px', marginBottom: '12px' }}>
@@ -2057,7 +2256,11 @@ export default function AdminDashboard() {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
                         {eventPhotos.map(photo => (
                           <div key={photo.id} style={{ position: 'relative' }}>
-                            <img src={photo.url} alt="Event photo" style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px' }} />
+                            {isVideoMediaUrl(photo.url) ? (
+                              <video src={photo.url} controls style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', display: 'block', background: '#000' }} />
+                            ) : (
+                              <img src={photo.url} alt="Event photo" style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px' }} />
+                            )}
                             <button 
                               onClick={() => openDeleteModal('photo', photo.id, 'Delete photo?', 'This action will remove the photo from the event gallery.')}
                               style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
@@ -2070,6 +2273,72 @@ export default function AdminDashboard() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeSection === 'registrations' && (
+          <div className="card">
+            <div className="reg-header">
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--navy)' }}>Manage Event Registrations</div>
+                <div style={{ fontSize: 12, color: 'var(--gray)' }}>Review alumni registrations and payment proofs</div>
+              </div>
+            </div>
+
+            {registrations.length === 0 ? (
+              <div className="empty-state" style={{ textAlign: 'center', padding: '48px 24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}><UserPlus size={48} style={{ color: 'var(--navy)' }} /></div>
+                <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--navy)', marginBottom: '8px' }}>No registrations yet</div>
+                <div style={{ fontSize: '14px', color: 'var(--gray)' }}>Alumni registrations will appear here once submitted.</div>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto', width: '100%' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 920 }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--lgray)' }}>
+                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Registrant</th>
+                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Event</th>
+                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Batch / Branch</th>
+                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Paid</th>
+                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Status</th>
+                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {registrations.map((registration) => {
+                      const alumnus = registration.alumni?.user;
+                      const batch = registration.alumni?.batch;
+                      const branch = registration.alumni?.branch;
+                      return (
+                        <tr key={registration.id} style={{ borderBottom: '1px solid var(--lgray)' }}>
+                          <td style={{ padding: '14px 12px' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--navy)' }}>{alumnus?.firstName || 'Alumnus'} {alumnus?.lastName || ''}</div>
+                            <div style={{ fontSize: 12, color: 'var(--gray)' }}>{alumnus?.email || 'No email'}</div>
+                          </td>
+                          <td style={{ padding: '14px 12px' }}>{registration.event?.title || 'Unknown event'}</td>
+                          <td style={{ padding: '14px 12px' }}>
+                            {batch?.name || batch?.year ? `${batch?.name || `Batch ${batch?.year}`}` : 'No batch'}
+                            {branch?.name ? ` · ${branch.name}` : ''}
+                          </td>
+                          <td style={{ padding: '14px 12px' }}>${Number(registration.paidAmount ?? 0).toFixed(2)}</td>
+                          <td style={{ padding: '14px 12px' }}>
+                            <span className={`status-badge ${String(registration.status || 'PENDING').toLowerCase()}`} style={{ textTransform: 'capitalize' }}>{String(registration.status || 'PENDING').toLowerCase()}</span>
+                          </td>
+                          <td style={{ padding: '14px 12px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                              <button className="btn btn-sm btn-navy" onClick={() => handleUpdateRegistrationStatus(registration.id, 'APPROVED')} style={{ padding: '6px 10px' }}>Approve</button>
+                              <button className="btn btn-sm btn-gold" onClick={() => handleUpdateRegistrationStatus(registration.id, 'FLAGGED')} style={{ padding: '6px 10px' }}>Flag</button>
+                              <button className="btn btn-sm" onClick={() => handleUpdateRegistrationStatus(registration.id, 'DECLINED')} style={{ padding: '6px 10px', background: '#f8d7da', color: '#842029', border: '1px solid #f5c2c7' }}>Decline</button>
+                              <button className="btn btn-sm btn-danger" onClick={() => openDeleteModal('registration', registration.id, 'Delete registration?', 'This action will remove this registration permanently.') } style={{ padding: '6px 10px' }}>Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
