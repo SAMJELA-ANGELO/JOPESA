@@ -118,6 +118,8 @@ export default function AlumniProfilePage() {
 
   const [success, setSuccess] = useState('');
 
+  const [payments, setPayments] = useState<Array<any>>([]);
+
   const [activeTab, setActiveTab] = useState('personal');
 
 
@@ -181,6 +183,7 @@ export default function AlumniProfilePage() {
           website: profile.website || '',
 
         });
+        setPayments(profile.user?.contributionPayments || []);
 
 
 
@@ -553,6 +556,13 @@ export default function AlumniProfilePage() {
           >
             Social & Links
           </button>
+          <button 
+            type="button"
+            className={`profile-tab ${activeTab === 'payments' ? 'active' : ''}`}
+            onClick={() => setActiveTab('payments')}
+          >
+            Payments
+          </button>
         </div>
 
         {/* Tab Panels */}
@@ -899,6 +909,41 @@ export default function AlumniProfilePage() {
                 </div>
 
               </div>
+            </div>
+          )}
+          {activeTab === 'payments' && (
+            <div className="profile-tab-panel active">
+              <h2 className="profile-section-title">Payment history</h2>
+              {payments.length === 0 ? (
+                <div className="alumni-form-error" style={{ background: 'rgba(0,0,0,0.03)', color: 'var(--gray)', borderColor: 'rgba(0,0,0,0.08)' }}>
+                  No contribution payments found yet.
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: '1px solid var(--lgray)' }}>Date</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: '1px solid var(--lgray)' }}>Installment</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'right', borderBottom: '1px solid var(--lgray)' }}>Amount</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: '1px solid var(--lgray)' }}>Status</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'left', borderBottom: '1px solid var(--lgray)' }}>Reference</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((payment) => (
+                        <tr key={payment.id}>
+                          <td style={{ padding: '12px 10px', borderBottom: '1px solid var(--lgray)' }}>{payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : '—'}</td>
+                          <td style={{ padding: '12px 10px', borderBottom: '1px solid var(--lgray)' }}>{payment.installmentLabel || payment.installment || 'N/A'}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right', borderBottom: '1px solid var(--lgray)' }}>{payment.amount?.toLocaleString() || '0'} XAF</td>
+                          <td style={{ padding: '12px 10px', borderBottom: '1px solid var(--lgray)' }}>{payment.status || 'PENDING'}</td>
+                          <td style={{ padding: '12px 10px', borderBottom: '1px solid var(--lgray)' }}>{payment.paymentReference || payment.notes || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>

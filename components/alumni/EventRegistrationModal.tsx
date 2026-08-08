@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type CSSProperties, type FormEvent } from 'react';
-import { LoaderCircle, X, ClipboardList } from 'lucide-react';
+import { LoaderCircle, X, ClipboardList, CreditCard } from 'lucide-react';
 import { FormField } from '@/types';
 import { apiFetch, getApiBase, getAlumniToken } from '@/lib/api';
 import { useEffect } from 'react';
@@ -13,6 +13,8 @@ interface EventRegistrationModalProps {
   fields: FormField[];
   onClose: () => void;
   onSuccess: () => void;
+  onPaymentClick?: () => void;
+  hasPayment: boolean;
 }
 
 const fieldInputStyle: CSSProperties = {
@@ -34,6 +36,8 @@ export default function EventRegistrationModal({
   fields,
   onClose,
   onSuccess,
+  onPaymentClick,
+  hasPayment,
 }: EventRegistrationModalProps) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [error, setError] = useState('');
@@ -287,6 +291,11 @@ export default function EventRegistrationModal({
             <button type="button" className="alumni-btn alumni-btn-ghost" onClick={onClose} disabled={submitting}>
               Cancel
             </button>
+            {hasPayment && onPaymentClick && (
+              <button type="button" className="alumni-btn alumni-btn-secondary" onClick={onPaymentClick} disabled={submitting}>
+                <CreditCard size={16} style={{ marginRight: 6 }} /> Make Payment
+              </button>
+            )}
             <button type="submit" className="alumni-btn alumni-btn-primary" disabled={submitting}>
               {submitting ? (
                 <>

@@ -20,13 +20,17 @@ import {
 
   Video,
 
+  CreditCard,
+
+  X,
+
 } from 'lucide-react';
 
 import DetailPageLayout from '@/components/alumni/DetailPageLayout';
 
 import EventRegistrationModal from '@/components/alumni/EventRegistrationModal';
 
-import { Event, FormField, Photo } from '@/types';
+import { Event, FormField, Photo, Contribution } from '@/types';
 
 import { apiFetch, eventImages, formatDateRange, unwrapList } from '@/lib/api';
 
@@ -55,6 +59,12 @@ export default function AlumniEventDetailPage() {
   const [error, setError] = useState('');
 
   const [showRegister, setShowRegister] = useState(false);
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const [contributions, setContributions] = useState<Contribution[]>([]);
+
+  const [selectedContributionId, setSelectedContributionId] = useState('');
 
   const [toast, setToast] = useState('');
 
@@ -88,7 +98,7 @@ export default function AlumniEventDetailPage() {
 
     try {
 
-      const [eventPayload, photosPayload, registrationPayload] = await Promise.all([
+      const [eventPayload, photosPayload, registrationPayload, contributionsPayload] = await Promise.all([
 
         apiFetch<Event>(`/events/${eventId}`),
 
@@ -100,6 +110,8 @@ export default function AlumniEventDetailPage() {
 
         })),
 
+        apiFetch<Contribution[]>(`/contributions?skip=0&take=100`).catch(() => []),
+
       ]);
 
       setEvent(eventPayload);
@@ -107,6 +119,12 @@ export default function AlumniEventDetailPage() {
       setPhotos(unwrapList<Photo>(photosPayload));
 
       setRegistered(!!registrationPayload.registered);
+
+      // Filter contributions for event registration type (backend doesn't support eventId yet)
+      const eventContributions = unwrapList<Contribution>(contributionsPayload).filter(
+        (c: Contribution) => c.type === 'EVENT_REGISTRATION'
+      );
+      setContributions(eventContributions);
 
     } catch (err) {
 
@@ -322,9 +340,72 @@ export default function AlumniEventDetailPage() {
 
         }}
 
+        onPaymentClick={() => { setShowRegister(false); setShowPaymentModal(true); }}
+
+        hasPayment={contributions.length > 0}
+
       />
 
 
+
+      {showPaymentModal && contributions.length > 0 && (
+        <div className="alumni-modal-backdrop" onClick={() => setShowPaymentModal(false)}>
+          <div className="alumni-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="alumni-modal-header">
+              <div className="alumni-modal-icon">
+                <CreditCard size={20} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="alumni-modal-title">Event Payment</div>
+                <div className="alumni-modal-sub">{event.title}</div>
+              </div>
+              <button className="alumni-icon-btn" onClick={() => setShowPaymentModal(false)} aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>Select Contribution</label>
+              <select
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--lgray)', fontSize: 14 }}
+                value={selectedContributionId}
+                onChange={(e) => setSelectedContributionId(e.target.value)}
+              >
+                <option value="">Select a payment option</option>
+                {contributions.map((contribution) => (
+                  <option key={contribution.id} value={contribution.id}>
+                    {contribution.title} - {contribution.installments?.reduce((sum, inst) => sum + (inst.amount || 0), 0).toLocaleString()} XAF
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <p className="alumni-form-note">
+              Complete your registration by making a payment. This will redirect you to the payment gateway.
+            </p>
+
+            <div className="alumni-form-actions">
+              <button type="button" className="alumni-btn alumni-btn-ghost" onClick={() => setShowPaymentModal(false)}>
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="alumni-btn alumni-btn-primary"
+                onClick={() => {
+                  // Navigate to contributions page with pre-selected contribution
+                  if (selectedContributionId) {
+                    localStorage.setItem('selectedContributionId', selectedContributionId);
+                  }
+                  window.location.href = `/alumni/contributions`;
+                }}
+                disabled={!selectedContributionId}
+              >
+                Proceed to Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && <div className="alumni-toast">{toast}</div>}
 

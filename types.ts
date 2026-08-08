@@ -113,6 +113,40 @@ export interface Document {
   tags?: string[];
 }
 
+export interface ContributionInstallment {
+  id: string;
+  label: string;
+  amount: number;
+  dueDate?: string;
+}
+
+export interface ContributionPayment {
+  id: string;
+  amount: number;
+  installmentLabel?: string;
+  paymentDate?: string;
+  status?: string;
+  paymentReference?: string;
+  notes?: string;
+}
+
+export interface Contribution {
+  id: string;
+  title: string;
+  description?: string;
+  type?: string;
+  status?: string;
+  eventId?: string | null;
+  event?: {
+    id?: string;
+    title?: string;
+  } | null;
+  installments?: ContributionInstallment[];
+  payments?: ContributionPayment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface User {
   id: string;
   name: string;

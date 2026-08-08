@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Users, Calendar, FileText, LogOut, Plus, Trash2, Calendar as CalendarIcon, Megaphone, FileText as FileIcon, Building2, X, Menu, MapPin, UserPlus, Clock, Image as ImageIcon, ExternalLink, LoaderCircle, GraduationCap, BarChart3 } from 'lucide-react';
+import { Shield, Users, Calendar, FileText, LogOut, Plus, Trash2, Calendar as CalendarIcon, Megaphone, FileText as FileIcon, Building2, X, Menu, MapPin, UserPlus, Clock, Image as ImageIcon, ExternalLink, LoaderCircle, GraduationCap, BarChart3, DollarSign, CreditCard } from 'lucide-react';
 import { User, Event, Announcement, Document, Branch, Photo, Batch } from '@/types';
 import Toast from '@/components/Toast';
 
@@ -47,7 +47,7 @@ const DonutChart = ({ data, size = 180, strokeWidth = 16 }: { data: Array<{ labe
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState<'overview' | 'events' | 'announcements' | 'documents' | 'branches' | 'photos' | 'batches' | 'statistics' | 'registrations'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'events' | 'announcements' | 'documents' | 'branches' | 'photos' | 'batches' | 'statistics' | 'registrations' | 'contributions'>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -68,10 +68,44 @@ export default function AdminDashboard() {
   const [isCreatingDocument, setIsCreatingDocument] = useState(false);
   const [isSavingBranch, setIsSavingBranch] = useState(false);
   const [isSavingBatch, setIsSavingBatch] = useState(false);
+  const [isSavingContribution, setIsSavingContribution] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'warning' | 'error' }>({ show: false, message: '', type: 'success' });
-  const [deleteModal, setDeleteModal] = useState<{ open: boolean; title: string; message: string; type: 'event' | 'announcement' | 'branch' | 'document' | 'photo' | 'batch' | 'registration' | null; id: string | null; loading: boolean }>({ open: false, title: '', message: '', type: null, id: null, loading: false });
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; title: string; message: string; type: 'event' | 'announcement' | 'branch' | 'document' | 'photo' | 'batch' | 'registration' | 'contribution' | null; id: string | null; loading: boolean }>({ open: false, title: '', message: '', type: null, id: null, loading: false });
   const [branchStatsModal, setBranchStatsModal] = useState(false);
   const [batchStatsModal, setBatchStatsModal] = useState(false);
+  
+  // Contributions state
+  const [contributions, setContributions] = useState<Array<any>>([]);
+  const [showContributionForm, setShowContributionForm] = useState(false);
+  const [editingContributionId, setEditingContributionId] = useState<string | null>(null);
+  const [contributionData, setContributionData] = useState({
+    title: '',
+    type: 'EVENT_REGISTRATION' as 'EVENT_REGISTRATION' | 'ANNUAL_FEE' | 'GENERAL' | 'PROJECT' | 'OTHER',
+    description: '',
+    eventId: '' as string,
+    installments: [] as Array<{ id: string; label: string; amount: number; dueDate: string }>,
+    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
+  });
+  const [paymentModal, setPaymentModal] = useState<{ open: boolean; contributionId: string | null; contributionTitle: string }>({ open: false, contributionId: null, contributionTitle: '' });
+  const [contributionPayments, setContributionPayments] = useState<Array<any>>([]);
+
+  useEffect(() => {
+    const loadPayments = async () => {
+      if (!paymentModal.open || !paymentModal.contributionId) return;
+      try {
+        const res = await fetch(`${apiBaseUrl}/admin/contributions/${paymentModal.contributionId}/payments`, {
+          headers: getAuthHeaders(adminToken),
+        });
+        if (!res.ok) throw new Error('Unable to load payments');
+        const json = await res.json();
+        setContributionPayments(Array.isArray(json) ? json : (json?.data ?? []));
+      } catch (err) {
+        console.error('Load payments failed', err);
+        showToastMessage('Could not load payments for this contribution.', 'error');
+      }
+    };
+    loadPayments();
+  }, [paymentModal.open, paymentModal.contributionId]);
 
   // Event management
   const [showEventForm, setShowEventForm] = useState(false);
@@ -207,6 +241,7 @@ export default function AdminDashboard() {
     totalBranches: branches.length,
     totalBatches: batches.length,
     totalEvents: events.length,
+    totalContributions: contributions.length,
   };
 
   const isWithinDateRange = (value: string | undefined, start: string, end: string) => {
@@ -280,6 +315,7 @@ export default function AdminDashboard() {
       ['Total branches', String(statsSummary.totalBranches)],
       ['Total batches', String(statsSummary.totalBatches)],
       ['Total events', String(filteredEventsByDate.length)],
+      ['Total contributions', String(statsSummary.totalContributions)],
       ['Date range start', dateRange.start || 'All'],
       ['Date range end', dateRange.end || 'All'],
     ];
@@ -361,7 +397,7 @@ export default function AdminDashboard() {
     const fetchAdminData = async () => {
       try {
         const headers = getAuthHeaders(token);
-        const [usersRes, branchesRes, eventsRes, announcementsRes, documentsRes, batchesRes, statsRes, photosRes] = await Promise.all([
+        const [usersRes, branchesRes, eventsRes, announcementsRes, documentsRes, batchesRes, statsRes, photosRes, contributionsRes] = await Promise.all([
           fetch(`${apiBaseUrl}/admin/users?skip=0&take=50`, { headers }),
           fetch(`${apiBaseUrl}/branch?skip=0&take=100`, { headers }),
           fetch(`${apiBaseUrl}/events?skip=0&take=100`, { headers }),
@@ -370,6 +406,7 @@ export default function AdminDashboard() {
           fetch(`${apiBaseUrl}/batch?skip=0&take=100`, { headers }),
           fetch(`${apiBaseUrl}/admin/stats`, { headers }),
           fetch(`${apiBaseUrl}/photos?skip=0&take=500`, { headers }),
+          fetch(`${apiBaseUrl}/contributions?skip=0&take=200`, { headers }),
         ]);
 
         if (!usersRes.ok || !branchesRes.ok || !eventsRes.ok || !announcementsRes.ok || !documentsRes.ok || !batchesRes.ok) {
@@ -427,6 +464,13 @@ export default function AdminDashboard() {
               : '',
           }));
           setPhotos(normalizedPhotos);
+          // load contributions
+          try {
+            const contribJson = await contributionsRes.json();
+            setContributions(normalizeList(contribJson));
+          } catch (e) {
+            setContributions([]);
+          }
           // Fetch admin registrations (payments) if the endpoint exists
           try {
             const regsRes = await fetch(`${apiBaseUrl}/admin/registrations?skip=0&take=200`, { headers });
@@ -530,7 +574,7 @@ export default function AdminDashboard() {
     setToast({ show: true, message, type });
   };
 
-  const openDeleteModal = (type: 'event' | 'announcement' | 'branch' | 'document' | 'photo' | 'batch' | 'registration', id: string, title: string, message: string) => {
+  const openDeleteModal = (type: 'event' | 'announcement' | 'branch' | 'document' | 'photo' | 'batch' | 'registration' | 'contribution', id: string, title: string, message: string) => {
     setDeleteModal({ open: true, title, message, type, id, loading: false });
   };
 
@@ -1212,6 +1256,12 @@ export default function AdminDashboard() {
           >
             <UserPlus size={18} /> Registrations
           </button>
+          <button
+            onClick={() => { setActiveSection('contributions'); setSidebarOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'contributions' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'contributions' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
+          >
+            <DollarSign size={18} /> Contributions
+          </button>
      <button
             onClick={() => { setActiveSection('statistics'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'statistics' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'statistics' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
@@ -1257,13 +1307,14 @@ export default function AdminDashboard() {
           <p style={{ fontSize: '15px', color: 'var(--gray)', margin: 0 }}>Manage your {activeSection} content</p>
         </div>
 
-        <div className="stats-row" style={{ marginBottom: '32px' }}>
+        <div className="stats-row" style={{ marginBottom: '32px', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))' }}>
           <div className="stat-cell"><div className="stat-num">{users.length}</div><div className="stat-lbl">Users</div></div>
           <div className="stat-cell"><div className="stat-num">{branches.length}</div><div className="stat-lbl">Branches</div></div>
           <div className="stat-cell"><div className="stat-num">{events.length}</div><div className="stat-lbl">Events</div></div>
           <div className="stat-cell"><div className="stat-num">{announcements.length}</div><div className="stat-lbl">Posts</div></div>
           <div className="stat-cell"><div className="stat-num">{documents.length}</div><div className="stat-lbl">Docs</div></div>
           <div className="stat-cell"><div className="stat-num">{stats?.batches ?? batches.length}</div><div className="stat-lbl">Batches</div></div>
+          <div className="stat-cell"><div className="stat-num">{contributions.length}</div><div className="stat-lbl">Contributions</div></div>
         </div>
 
         {activeSection === 'statistics' && (
@@ -1401,6 +1452,15 @@ export default function AdminDashboard() {
                 <div className="admin-metric-content">
                   <div className="admin-metric-value">{filteredEventsByDate.length}</div>
                   <div className="admin-metric-label">Events</div>
+                </div>
+              </div>
+              <div className="admin-metric-card admin-metric-card-primary admin-metric-card-contributions">
+                <div className="admin-metric-icon">
+                  <DollarSign size={24} />
+                </div>
+                <div className="admin-metric-content">
+                  <div className="admin-metric-value">{statsSummary.totalContributions}</div>
+                  <div className="admin-metric-label">Contributions</div>
                 </div>
               </div>
             </div>
@@ -2294,16 +2354,16 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: '14px', color: 'var(--gray)' }}>Alumni registrations will appear here once submitted.</div>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto', width: '100%' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 920 }}>
+              <div style={{ overflowX: 'auto', width: '100%', maxWidth: '100%' }} className="admin-table-responsive">
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
                   <thead>
                     <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--lgray)' }}>
-                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Registrant</th>
-                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Event</th>
-                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Batch / Branch</th>
-                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Paid</th>
-                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Status</th>
-                      <th style={{ padding: '12px 12px', fontSize: 13, color: 'var(--gray)' }}>Actions</th>
+                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Registrant</th>
+                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Event</th>
+                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Batch / Branch</th>
+                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Paid</th>
+                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Status</th>
+                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2313,25 +2373,25 @@ export default function AdminDashboard() {
                       const branch = registration.alumni?.branch;
                       return (
                         <tr key={registration.id} style={{ borderBottom: '1px solid var(--lgray)' }}>
-                          <td style={{ padding: '14px 12px' }}>
-                            <div style={{ fontWeight: 700, color: 'var(--navy)' }}>{alumnus?.firstName || 'Alumnus'} {alumnus?.lastName || ''}</div>
-                            <div style={{ fontSize: 12, color: 'var(--gray)' }}>{alumnus?.email || 'No email'}</div>
+                          <td style={{ padding: '12px 10px' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--navy)', fontSize: 13 }}>{alumnus?.firstName || 'Alumnus'} {alumnus?.lastName || ''}</div>
+                            <div style={{ fontSize: 11, color: 'var(--gray)' }}>{alumnus?.email || 'No email'}</div>
                           </td>
-                          <td style={{ padding: '14px 12px' }}>{registration.event?.title || 'Unknown event'}</td>
-                          <td style={{ padding: '14px 12px' }}>
-                            {batch?.name || batch?.year ? `${batch?.name || `Batch ${batch?.year}`}` : 'No batch'}
+                          <td style={{ padding: '12px 10px', fontSize: 12 }}>{registration.event?.title || 'Unknown event'}</td>
+                          <td style={{ padding: '12px 10px', fontSize: 12 }}>
+                            {batch?.name || (batch?.year ? `Batch ${batch.year}` : 'No batch')}
                             {branch?.name ? ` · ${branch.name}` : ''}
                           </td>
-                          <td style={{ padding: '14px 12px' }}>${Number(registration.paidAmount ?? 0).toFixed(2)}</td>
-                          <td style={{ padding: '14px 12px' }}>
-                            <span className={`status-badge ${String(registration.status || 'PENDING').toLowerCase()}`} style={{ textTransform: 'capitalize' }}>{String(registration.status || 'PENDING').toLowerCase()}</span>
+                          <td style={{ padding: '12px 10px', fontSize: 12 }}>${Number(registration.paidAmount ?? 0).toFixed(2)}</td>
+                          <td style={{ padding: '12px 10px' }}>
+                            <span className={`status-badge ${String(registration.status || 'PENDING').toLowerCase()}`} style={{ textTransform: 'capitalize', fontSize: 11, padding: '2px 8px' }}>{String(registration.status || 'PENDING').toLowerCase()}</span>
                           </td>
-                          <td style={{ padding: '14px 12px' }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                              <button className="btn btn-sm btn-navy" onClick={() => handleUpdateRegistrationStatus(registration.id, 'APPROVED')} style={{ padding: '6px 10px' }}>Approve</button>
-                              <button className="btn btn-sm btn-gold" onClick={() => handleUpdateRegistrationStatus(registration.id, 'FLAGGED')} style={{ padding: '6px 10px' }}>Flag</button>
-                              <button className="btn btn-sm" onClick={() => handleUpdateRegistrationStatus(registration.id, 'DECLINED')} style={{ padding: '6px 10px', background: '#f8d7da', color: '#842029', border: '1px solid #f5c2c7' }}>Decline</button>
-                              <button className="btn btn-sm btn-danger" onClick={() => openDeleteModal('registration', registration.id, 'Delete registration?', 'This action will remove this registration permanently.') } style={{ padding: '6px 10px' }}>Delete</button>
+                          <td style={{ padding: '12px 10px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              <button className="btn btn-sm btn-navy" onClick={() => handleUpdateRegistrationStatus(registration.id, 'APPROVED')} style={{ padding: '4px 8px', fontSize: 11 }}>Approve</button>
+                              <button className="btn btn-sm btn-gold" onClick={() => handleUpdateRegistrationStatus(registration.id, 'FLAGGED')} style={{ padding: '4px 8px', fontSize: 11 }}>Flag</button>
+                              <button className="btn btn-sm" onClick={() => handleUpdateRegistrationStatus(registration.id, 'DECLINED')} style={{ padding: '4px 8px', fontSize: 11, background: '#f8d7da', color: '#842029', border: '1px solid #f5c2c7' }}>Decline</button>
+                              <button className="btn btn-sm btn-danger" onClick={() => openDeleteModal('registration', registration.id, 'Delete registration?', 'This action will remove this registration permanently.') } style={{ padding: '4px 8px', fontSize: 11 }}>Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -2343,6 +2403,214 @@ export default function AdminDashboard() {
             )}
           </div>
         )}
+
+        {activeSection === 'contributions' && (
+          <div className="card" style={{ width: '100%', maxWidth: '100%', padding: '24px 24px 20px' }}>
+            <div className="reg-header">
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--navy)' }}>Manage Contributions</div>
+                <div style={{ fontSize: 12, color: 'var(--gray)' }}>Create and edit contribution collections</div>
+              </div>
+              <button className="btn btn-gold btn-sm" onClick={() => { setShowContributionForm(!showContributionForm); setEditingContributionId(null); setContributionData({ title: '', type: 'EVENT_REGISTRATION', description: '', eventId: '', installments: [], status: 'ACTIVE' }); }}>
+                {showContributionForm ? <X size={14} /> : <Plus size={14} />} {showContributionForm ? 'Cancel' : 'New Contribution'}
+              </button>
+            </div>
+
+            {showContributionForm && (
+              <div className="reg-panel open" style={{ width: '100%', paddingTop: '8px', maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden', paddingRight: '8px' }}>
+                <div className="divider"></div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', width: '100%' }} className="admin-grid-2">
+                  <div className="fg"><label>Title *</label><input type="text" value={contributionData.title} onChange={(e) => setContributionData({ ...contributionData, title: e.target.value })} placeholder="e.g., Annual Membership Fee 2026" /></div>
+                  <div className="fg"><label>Type *</label>
+                    <select value={contributionData.type} onChange={(e) => setContributionData({ ...contributionData, type: e.target.value as any })}>
+                      <option value="EVENT_REGISTRATION">Event Registration Fee</option>
+                      <option value="ANNUAL_FEE">Annual Fee</option>
+                      <option value="GENERAL">General</option>
+                      <option value="PROJECTS">Projects</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+                  <div className="fg"><label>Status *</label>
+                    <select value={contributionData.status} onChange={(e) => setContributionData({ ...contributionData, status: e.target.value as any })}>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                    </select>
+                  </div>
+                  <div className="fg">
+                    <label>Linked Event</label>
+                    <select value={contributionData.eventId} onChange={(e) => setContributionData({ ...contributionData, eventId: e.target.value })}>
+                      <option value="">No event link</option>
+                      {events.map((event) => (
+                        <option key={event.id} value={event.id}>{event.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="fg"><label>Description</label><textarea value={contributionData.description} onChange={(e) => setContributionData({ ...contributionData, description: e.target.value })} placeholder="Describe this contribution..." /></div>
+                <div className="fg"><label>Payment Installments</label>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {contributionData.installments.map((installment, index) => (
+                      <div key={installment.id} className="installment-row" style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '8px', alignItems: 'center', padding: '12px', background: 'var(--off)', borderRadius: '8px', border: '1px solid var(--lgray)' }}>
+                        <input type="text" value={installment.label} onChange={(e) => { const updated = [...contributionData.installments]; updated[index].label = e.target.value; setContributionData({ ...contributionData, installments: updated }); }} placeholder="Label (e.g., First Installment)" style={{ width: '100%', padding: '12px 14px', border: '2px solid var(--lgray)', borderRadius: '8px', fontSize: '14px' }} />
+                        <input type="number" value={installment.amount} onChange={(e) => { const updated = [...contributionData.installments]; updated[index].amount = parseFloat(e.target.value) || 0; setContributionData({ ...contributionData, installments: updated }); }} placeholder="Amount" style={{ width: '120px', padding: '12px 14px', border: '2px solid var(--lgray)', borderRadius: '8px', fontSize: '14px' }} />
+                        <input type="date" value={installment.dueDate} onChange={(e) => { const updated = [...contributionData.installments]; updated[index].dueDate = e.target.value; setContributionData({ ...contributionData, installments: updated }); }} style={{ width: '180px', padding: '12px 14px', border: '2px solid var(--lgray)', borderRadius: '8px', fontSize: '14px' }} />
+                        <button onClick={() => { const updated = contributionData.installments.filter((_, i) => i !== index); setContributionData({ ...contributionData, installments: updated }); }} style={{ padding: '10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                      </div>
+                    ))}
+                    <button onClick={() => setContributionData({ ...contributionData, installments: [...contributionData.installments, { id: Date.now().toString(), label: `Installment ${contributionData.installments.length + 1}`, amount: 0, dueDate: '' }] })} style={{ padding: '12px 14px', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', width: 'fit-content' }}><Plus size={14} /> Add Installment</button>
+                  </div>
+                </div>
+                <div className="admin-grid-2" style={{ gap: '12px', marginTop: '16px' }}>
+                  <button className="btn btn-navy" onClick={async () => {
+                    try {
+                      setIsSavingContribution(true);
+                      const payload = {
+                        title: contributionData.title,
+                        type: contributionData.type,
+                        description: contributionData.description,
+                        eventId: contributionData.eventId || undefined,
+                        installments: contributionData.installments.map((it) => ({ id: it.id, label: it.label, amount: Number(it.amount), dueDate: it.dueDate })),
+                        status: contributionData.status,
+                      };
+                      let res;
+                      if (editingContributionId) {
+                        res = await fetch(`${apiBaseUrl}/contributions/${editingContributionId}`, { method: 'PUT', headers: getAuthHeaders(adminToken), body: JSON.stringify(payload) });
+                      } else {
+                        res = await fetch(`${apiBaseUrl}/contributions`, { method: 'POST', headers: getAuthHeaders(adminToken), body: JSON.stringify(payload) });
+                      }
+                      if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.message || 'Failed to save contribution');
+                      }
+                      const saved = await res.json();
+                      setContributions((prev) => (editingContributionId ? prev.map((c) => (c.id === saved.id ? saved : c)) : [saved, ...prev]));
+                      setShowContributionForm(false);
+                      setEditingContributionId(null);
+                      showToastMessage(editingContributionId ? 'Contribution updated.' : 'Contribution created.', 'success');
+                    } catch (err) {
+                      console.error('Save contribution failed', err);
+                      showToastMessage('Could not save contribution. Please try again.', 'error');
+                    } finally {
+                      setIsSavingContribution(false);
+                    }
+                  }} disabled={isSavingContribution}>
+                    {isSavingContribution ? 'Saving...' : (editingContributionId ? 'Update Contribution' : 'Create Contribution')}
+                  </button>
+                  <button className="btn" onClick={() => setShowContributionForm(false)} style={{ background: 'var(--lgray)' }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {contributions.length === 0 ? (
+              <div className="empty-state" style={{ textAlign: 'center', padding: '48px 24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}><DollarSign size={48} style={{ color: 'var(--navy)' }} /></div>
+                <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--navy)', marginBottom: '8px' }}>No contributions yet</div>
+                <div style={{ fontSize: '14px', color: 'var(--gray)' }}>Create your first contribution to start collecting payments.</div>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto', width: '100%' }} className="admin-table-responsive">
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--lgray)' }}>
+                      <th style={{ padding: '12px 8px', fontSize: 12, color: 'var(--gray)' }}>Title</th>
+                      <th style={{ padding: '12px 8px', fontSize: 12, color: 'var(--gray)' }}>Type</th>
+                      <th style={{ padding: '12px 8px', fontSize: 12, color: 'var(--gray)' }}>Installments</th>
+                      <th style={{ padding: '12px 8px', fontSize: 12, color: 'var(--gray)' }}>Total</th>
+                      <th style={{ padding: '12px 8px', fontSize: 12, color: 'var(--gray)' }}>Status</th>
+                      <th style={{ padding: '12px 8px', fontSize: 12, color: 'var(--gray)' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {contributions.map((contribution) => {
+                      const totalAmount = contribution.installments?.reduce((sum: number, inst: any) => sum + (inst.amount || 0), 0) || 0;
+                      return (
+                        <tr key={contribution.id} style={{ borderBottom: '1px solid var(--lgray)' }}>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--navy)', fontSize: '13' }}>{contribution.title}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--gray)' }}>{contribution.description || 'No description'}</div>
+                          </td>
+                          <td style={{ padding: '12px 8px', fontSize: '12' }}>{contribution.type?.replace(/_/g, ' ') || 'General'}</td>
+                          <td style={{ padding: '12px 8px', fontSize: '12' }}>{contribution.installments?.length || 0} installment(s)</td>
+                          <td style={{ padding: '12px 8px', fontSize: '12', fontWeight: 600 }}>${totalAmount.toFixed(2)}</td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <span className={`status-badge ${String(contribution.status || 'ACTIVE').toLowerCase()}`} style={{ textTransform: 'capitalize', fontSize: '10px', padding: '2px 6px' }}>{String(contribution.status || 'ACTIVE').toLowerCase()}</span>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button className="btn btn-sm btn-navy" onClick={() => setPaymentModal({ open: true, contributionId: contribution.id, contributionTitle: contribution.title })} style={{ padding: '4px 8px', fontSize: '11' }}><CreditCard size={10} /> Payments</button>
+                              <button className="btn btn-sm" onClick={() => { setEditingContributionId(contribution.id); setShowContributionForm(true); setContributionData({ title: contribution.title || '', type: contribution.type || 'EVENT_REGISTRATION', description: contribution.description || '', eventId: contribution.eventId || contribution.event?.id || '', installments: Array.isArray(contribution.installments) ? contribution.installments.map((it: any) => ({ id: it.id ?? String(Date.now()), label: it.label ?? '', amount: Number(it.amount ?? 0), dueDate: it.dueDate ?? '' })) : [], status: contribution.status || 'ACTIVE' }); }} style={{ padding: '4px 8px', fontSize: '11', background: 'var(--lgray)' }}>Edit</button>
+                              <button className="btn btn-sm btn-danger" onClick={() => openDeleteModal('contribution', contribution.id, 'Delete contribution?', 'This action will remove this contribution permanently.')} style={{ padding: '4px 8px', fontSize: '11' }}>Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Payment Details Modal */}
+        {paymentModal.open && (
+          <div className="admin-modal-overlay" onClick={() => setPaymentModal({ open: false, contributionId: null, contributionTitle: '' })}>
+            <div className="admin-modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="admin-modal-header">
+                <h3>Payment Details - {paymentModal.contributionTitle}</h3>
+                <button onClick={() => setPaymentModal({ open: false, contributionId: null, contributionTitle: '' })} className="admin-modal-close">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="admin-modal-body">
+                {contributionPayments.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '32px', color: 'var(--gray)' }}>
+                    No payments recorded yet for this contribution.
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }} className="admin-table-responsive">
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--lgray)' }}>
+                          <th style={{ padding: '12px', textAlign: 'left', fontSize: 13, color: 'var(--gray)' }}>Payer</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontSize: 13, color: 'var(--gray)' }}>Amount</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontSize: 13, color: 'var(--gray)' }}>Installment</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontSize: 13, color: 'var(--gray)' }}>Date</th>
+                          <th style={{ padding: '12px', textAlign: 'left', fontSize: 13, color: 'var(--gray)' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {contributionPayments.map((payment) => (
+                          <tr key={payment.id} style={{ borderBottom: '1px solid var(--lgray)' }}>
+                            <td style={{ padding: '12px', fontSize: 13 }}>
+                              <div style={{ fontWeight: 600, color: 'var(--navy)' }}>{payment.payerName || 'Unknown'}</div>
+                              <div style={{ fontSize: 11, color: 'var(--gray)' }}>{payment.payerEmail || ''}</div>
+                            </td>
+                            <td style={{ padding: '12px', fontSize: 13, fontWeight: 600 }}>
+                              ${Number(payment.amount || 0).toFixed(2)}
+                            </td>
+                            <td style={{ padding: '12px', fontSize: 12 }}>
+                              {payment.installmentLabel || 'N/A'}
+                            </td>
+                            <td style={{ padding: '12px', fontSize: 12 }}>
+                              {payment.paymentDate || 'N/A'}
+                            </td>
+                            <td style={{ padding: '12px' }}>
+                              <span className={`status-badge ${String(payment.status || 'COMPLETED').toLowerCase()}`} style={{ textTransform: 'capitalize', fontSize: 11, padding: '2px 8px' }}>
+                                {String(payment.status || 'COMPLETED').toLowerCase()}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
