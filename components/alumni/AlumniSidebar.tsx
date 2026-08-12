@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { href: '/alumni/batch-finder', label: 'Batch Finder', icon: Search },
   { href: '/alumni/chapters', label: 'Chapters', icon: Building2 },
   { href: '/alumni/contributions', label: 'Contributions', icon: FileText },
+  { href: '/alumni/directory', label: 'Alumni Directory', icon: Search },
   { href: '/alumni/profile', label: 'My Profile', icon: UserRound },
 ];
 

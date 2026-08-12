@@ -122,6 +122,8 @@ export default function AlumniProfilePage() {
 
   const [activeTab, setActiveTab] = useState('personal');
 
+  const [membershipBadge, setMembershipBadge] = useState<'ACTIVE' | 'PASSIVE' | 'INACTIVE' | 'DORMANT' | null>(null);
+
 
 
   useEffect(() => {
@@ -185,7 +187,32 @@ export default function AlumniProfilePage() {
         });
         setPayments(profile.user?.contributionPayments || []);
 
-
+        // Calculate membership badge based on annual registration payments
+        const annualRegistrationPayments = profile.user?.contributionPayments?.filter((p: any) => 
+          p.contribution?.type === 'ANNUAL_FEE' || p.contribution?.title?.toLowerCase().includes('annual')
+        ) || [];
+        
+        if (annualRegistrationPayments.length > 0) {
+          const latestPayment = annualRegistrationPayments[0];
+          const hasPaidThisYear = annualRegistrationPayments.some((p: any) => {
+            const paymentDate = new Date(p.paymentDate);
+            const currentYear = new Date().getFullYear();
+            return paymentDate.getFullYear() === currentYear && p.status === 'COMPLETED';
+          });
+          
+          if (hasPaidThisYear) {
+            setMembershipBadge('ACTIVE');
+          } else {
+            setMembershipBadge('PASSIVE');
+          }
+        } else {
+          // Check if they have any contributions but not annual
+          if (profile.user?.contributionPayments && profile.user.contributionPayments.length > 0) {
+            setMembershipBadge('INACTIVE');
+          } else {
+            setMembershipBadge('DORMANT');
+          }
+        }
 
         const storedUser = {
 
@@ -497,13 +524,19 @@ export default function AlumniProfilePage() {
 
             <p className="profile-email">{form.email}</p>
 
-            {(batchName || branchName) && (
+            {(batchName || branchName || membershipBadge) && (
 
               <div className="profile-badges">
 
                 {batchName && <span className="profile-badge">{batchName}</span>}
 
                 {branchName && <span className="profile-badge profile-badge-chapter">{branchName}</span>}
+
+                {membershipBadge && (
+                  <span className={`profile-badge profile-badge-membership profile-badge-${membershipBadge.toLowerCase()}`}>
+                    {membershipBadge}
+                  </span>
+                )}
 
               </div>
 
