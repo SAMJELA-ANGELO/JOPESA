@@ -2405,6 +2405,19 @@ body:has(.landing-main){padding-bottom:0;}
     width:calc(100% + 32px);
     max-width:calc(100% + 32px);
   }
+  .admin-cards-grid{
+    grid-template-columns:1fr !important;
+  }
+  .contribution-card{
+    padding:16px !important;
+  }
+}
+
+/* Admin Contribution Cards */
+.contribution-card:hover{
+  border-color:var(--navy);
+  box-shadow:0 4px 20px rgba(0,43,107,0.1);
+  transform:translateY(-2px);
 }
 .admin-stats-table-header{
   display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;
