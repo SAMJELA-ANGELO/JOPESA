@@ -350,13 +350,13 @@ export default function AlumniEventDetailPage() {
 
       {showPaymentModal && contributions.length > 0 && (
         <div className="alumni-modal-backdrop" onClick={() => setShowPaymentModal(false)}>
-          <div className="alumni-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="alumni-modal payment-modal" onClick={(e) => e.stopPropagation()}>
             <div className="alumni-modal-header">
-              <div className="alumni-modal-icon">
+              <div className="alumni-modal-icon payment-icon">
                 <CreditCard size={20} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="alumni-modal-title">Event Payment</div>
+                <div className="alumni-modal-title">Complete Your Registration</div>
                 <div className="alumni-modal-sub">{event.title}</div>
               </div>
               <button className="alumni-icon-btn" onClick={() => setShowPaymentModal(false)} aria-label="Close">
@@ -364,25 +364,55 @@ export default function AlumniEventDetailPage() {
               </button>
             </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>Select Contribution</label>
-              <select
-                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--lgray)', fontSize: 14 }}
-                value={selectedContributionId}
-                onChange={(e) => setSelectedContributionId(e.target.value)}
-              >
-                <option value="">Select a payment option</option>
-                {contributions.map((contribution) => (
-                  <option key={contribution.id} value={contribution.id}>
-                    {contribution.title} - {contribution.installments?.reduce((sum, inst) => sum + (inst.amount || 0), 0).toLocaleString()} XAF
-                  </option>
-                ))}
-              </select>
-            </div>
+            <div className="payment-modal-body">
+              <div className="payment-info-box">
+                <div className="payment-info-label">Payment Options</div>
+                <div className="payment-info-sub">Select your preferred payment plan below</div>
+              </div>
 
-            <p className="alumni-form-note">
-              Complete your registration by making a payment. This will redirect you to the payment gateway.
-            </p>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 700, color: 'var(--navy)' }}>Select Contribution</label>
+                <select
+                  className="payment-select"
+                  value={selectedContributionId}
+                  onChange={(e) => setSelectedContributionId(e.target.value)}
+                >
+                  <option value="">Choose a payment option</option>
+                  {contributions.map((contribution) => (
+                    <option key={contribution.id} value={contribution.id}>
+                      {contribution.title} - {contribution.installments?.reduce((sum, inst) => sum + (inst.amount || 0), 0).toLocaleString()} XAF
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedContributionId && (() => {
+                const selectedContribution = contributions.find(c => c.id === selectedContributionId);
+                return (
+                  <div className="payment-details">
+                    <div className="payment-detail-item">
+                      <span className="payment-detail-label">Contribution</span>
+                      <span className="payment-detail-value">{selectedContribution?.title}</span>
+                    </div>
+                    <div className="payment-detail-item">
+                      <span className="payment-detail-label">Total Amount</span>
+                      <span className="payment-detail-value payment-amount">
+                        {selectedContribution?.installments?.reduce((sum, inst) => sum + (inst.amount || 0), 0).toLocaleString()} XAF
+                      </span>
+                    </div>
+                    <div className="payment-detail-item">
+                      <span className="payment-detail-label">Installments</span>
+                      <span className="payment-detail-value">{selectedContribution?.installments?.length || 0} payment(s)</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="payment-note">
+                <span style={{ fontSize: 14 }}>💳</span>
+                <span>Secure payment powered by Fapshi. You will be redirected to complete your payment.</span>
+              </div>
+            </div>
 
             <div className="alumni-form-actions">
               <button type="button" className="alumni-btn alumni-btn-ghost" onClick={() => setShowPaymentModal(false)}>
@@ -392,7 +422,6 @@ export default function AlumniEventDetailPage() {
                 type="button" 
                 className="alumni-btn alumni-btn-primary"
                 onClick={() => {
-                  // Navigate to contributions page with pre-selected contribution
                   if (selectedContributionId) {
                     localStorage.setItem('selectedContributionId', selectedContributionId);
                   }
@@ -400,7 +429,7 @@ export default function AlumniEventDetailPage() {
                 }}
                 disabled={!selectedContributionId}
               >
-                Proceed to Payment
+                <CreditCard size={16} style={{ marginRight: 6 }} /> Proceed to Payment
               </button>
             </div>
           </div>

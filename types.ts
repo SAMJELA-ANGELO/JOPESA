@@ -149,8 +149,23 @@ export interface Contribution {
 
 export interface User {
   id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'branch_leader' | 'member';
+  name?: string;
+  email?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  profileImage?: string | null;
+  role?: 'admin' | 'branch_leader' | 'member';
   branchId?: string;
+  contributionPayments?: Array<{
+    id?: string;
+    paymentDate?: string | null;
+    status?: string | null;
+    contribution?: {
+      id?: string;
+      type?: string | null;
+      title?: string | null;
+    } | null;
+  }>;
+  fullName?: string | null;
 }

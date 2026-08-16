@@ -71,6 +71,8 @@ export default function AdminDashboard() {
   const [isSavingContribution, setIsSavingContribution] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'warning' | 'error' }>({ show: false, message: '', type: 'success' });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; title: string; message: string; type: 'event' | 'announcement' | 'branch' | 'document' | 'photo' | 'batch' | 'registration' | 'contribution' | null; id: string | null; loading: boolean }>({ open: false, title: '', message: '', type: null, id: null, loading: false });
+  const [contributionPayments, setContributionPayments] = useState<Array<any>>([]);
+  const [selectedPaymentUser, setSelectedPaymentUser] = useState<any>(null);
   const [branchStatsModal, setBranchStatsModal] = useState(false);
   const [batchStatsModal, setBatchStatsModal] = useState(false);
   
@@ -87,7 +89,6 @@ export default function AdminDashboard() {
     status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
   });
   const [paymentModal, setPaymentModal] = useState<{ open: boolean; contributionId: string | null; contributionTitle: string }>({ open: false, contributionId: null, contributionTitle: '' });
-  const [contributionPayments, setContributionPayments] = useState<Array<any>>([]);
 
   useEffect(() => {
     const loadPayments = async () => {
@@ -484,6 +485,20 @@ export default function AdminDashboard() {
           } catch (e) {
             setRegistrations([]);
           }
+          
+          // Fetch contribution payments for the new cards
+          try {
+            const paymentsRes = await fetch(`${apiBaseUrl}/admin/contribution-payments?skip=0&take=500`, { headers });
+            if (paymentsRes.ok) {
+              const paymentsJson = await paymentsRes.json();
+              const paymentsList = Array.isArray(paymentsJson?.data) ? paymentsJson.data : Array.isArray(paymentsJson) ? paymentsJson : [];
+              setContributionPayments(paymentsList);
+            } else {
+              setContributionPayments([]);
+            }
+          } catch (e) {
+            setContributionPayments([]);
+          }
         } else {
           setPhotos([]);
         }
@@ -789,6 +804,57 @@ export default function AdminDashboard() {
       showToastMessage('Could not update registration status. Please try again.', 'error');
     }
   };
+
+  // Helper function to group payments by user and calculate totals
+  const getUserContributionData = () => {
+    const userMap = new Map();
+    
+    contributionPayments.forEach(payment => {
+      const userId = payment.user?.id || payment.userId;
+      if (!userId) return;
+      
+      if (!userMap.has(userId)) {
+        userMap.set(userId, {
+          user: payment.user,
+          payments: [],
+          totalAmount: 0,
+          paidInstallments: 0,
+          totalInstallments: 0,
+          badge: 'DORMANT'
+        });
+      }
+      
+      const userData = userMap.get(userId);
+      userData.payments.push(payment);
+      userData.totalAmount += payment.amount || 0;
+      
+      if (payment.status === 'COMPLETED') {
+        userData.paidInstallments++;
+      }
+      userData.totalInstallments++;
+      
+      // Calculate badge based on annual payments
+      const annualPayments = userData.payments.filter((p: any) => 
+        p.contribution?.type === 'ANNUAL_FEE' || p.contribution?.title?.toLowerCase().includes('annual')
+      );
+      
+      if (annualPayments.length > 0) {
+        const hasPaidThisYear = annualPayments.some((p: any) => {
+          const paymentDate = new Date(p.paymentDate);
+          const currentYear = new Date().getFullYear();
+          return paymentDate.getFullYear() === currentYear && p.status === 'COMPLETED';
+        });
+        
+        userData.badge = hasPaidThisYear ? 'ACTIVE' : 'PASSIVE';
+      } else if (userData.payments.length > 0) {
+        userData.badge = 'INACTIVE';
+      }
+    });
+    
+    return Array.from(userMap.values());
+  };
+
+  const userContributionData = getUserContributionData();
 
   const handleUploadPhotos = async () => {
     if (!selectedEventId) {
@@ -1148,6 +1214,156 @@ export default function AdminDashboard() {
   return (
     <div className="animate-float-in" style={{ minHeight: '100vh', display: 'flex', background: 'var(--off)' }}>
       <Toast show={toast.show} message={toast.message} type={toast.type} />
+
+      {selectedPaymentUser && (
+        <div onClick={() => setSelectedPaymentUser(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '20px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '540px', background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 18px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--navy)' }}>Payment Details</div>
+              <button onClick={() => setSelectedPaymentUser(null)} style={{ background: 'transparent', border: 'none', color: 'var(--gray)', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid var(--lgray)' }}>
+              <div style={{ 
+                width: '72px', 
+                height: '72px', 
+                borderRadius: '50%', 
+                overflow: 'hidden', 
+                border: '3px solid var(--navy)',
+                flexShrink: 0,
+                background: 'var(--off)'
+              }}>
+                {selectedPaymentUser.user?.profileImage ? (
+                  <img src={selectedPaymentUser.user.profileImage} alt={selectedPaymentUser.user.firstName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    color: 'var(--navy)', 
+                    fontWeight: 700, 
+                    fontSize: '24px' 
+                  }}>
+                    {selectedPaymentUser.user?.firstName?.[0] || '?'}
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--navy)', marginBottom: '8px' }}>
+                  {selectedPaymentUser.user?.firstName} {selectedPaymentUser.user?.lastName}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--gray)', marginBottom: '4px' }}>
+                  {selectedPaymentUser.user?.email}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--gray)' }}>
+                  {selectedPaymentUser.user?.phone}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  <div style={{ 
+                    padding: '6px 12px', 
+                    borderRadius: '999px', 
+                    fontSize: '12px', 
+                    fontWeight: 700, 
+                    textTransform: 'uppercase',
+                    background: 'rgba(0,43,107,.08)',
+                    color: 'var(--navy)',
+                    border: '1px solid rgba(0,43,107,.1)'
+                  }}>
+                    {selectedPaymentUser.badge}
+                  </div>
+                  <div style={{ 
+                    padding: '6px 12px', 
+                    borderRadius: '999px', 
+                    fontSize: '12px', 
+                    fontWeight: 600, 
+                    background: 'var(--off)', 
+                    color: 'var(--gray)' 
+                  }}>
+                    {selectedPaymentUser.paidInstallments}/{selectedPaymentUser.totalInstallments} paid
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: 12, color: 'var(--gray)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Contributions</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>
+                {selectedPaymentUser.totalAmount.toLocaleString()} XAF
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--gray)', fontWeight: 600, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment History</div>
+              {selectedPaymentUser.payments.length === 0 ? (
+                <div style={{ padding: '16px', background: 'var(--off)', borderRadius: '12px', textAlign: 'center', color: 'var(--gray)', fontSize: 13 }}>
+                  No payment history available
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {selectedPaymentUser.payments.map((payment: any, index: number) => (
+                    <div key={index} style={{ 
+                      padding: '12px', 
+                      background: 'var(--off)', 
+                      borderRadius: '12px',
+                      border: '1px solid var(--lgray)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: 'var(--navy)', fontSize: 14, marginBottom: '4px' }}>
+                          {payment.contribution?.title || payment.installmentLabel || 'Payment'}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--gray)' }}>
+                          {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : '—'}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--navy)', fontSize: 14 }}>
+                          {(payment.amount || 0).toLocaleString()} XAF
+                        </div>
+                        <div style={{ 
+                          fontSize: 11, 
+                          fontWeight: 600, 
+                          padding: '2px 8px', 
+                          borderRadius: '999px',
+                          textTransform: 'capitalize',
+                          background: payment.status === 'COMPLETED' ? 'rgba(4,120,87,.12)' : 'rgba(251,146,60,.12)',
+                          color: payment.status === 'COMPLETED' ? 'var(--ok)' : '#fb923c'
+                        }}>
+                          {payment.status || 'PENDING'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+              <button 
+                onClick={() => setSelectedPaymentUser(null)}
+                style={{ 
+                  padding: '10px 20px', 
+                  borderRadius: '8px', 
+                  border: '1px solid var(--lgray)', 
+                  background: '#fff', 
+                  color: 'var(--navy)', 
+                  fontWeight: 600, 
+                  cursor: 'pointer',
+                  fontSize: 14
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteModal.open && (
         <div onClick={closeDeleteModal} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '20px' }}>
@@ -2342,8 +2558,8 @@ export default function AdminDashboard() {
           <div className="card">
             <div className="reg-header">
               <div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--navy)' }}>Manage Event Registrations</div>
-                <div style={{ fontSize: 12, color: 'var(--gray)' }}>Review alumni registrations and payment proofs</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--navy)' }}>Event Registrations</div>
+                <div style={{ fontSize: 12, color: 'var(--gray)' }}>Review alumni attendance sign-ups and approval status</div>
               </div>
             </div>
 
@@ -2351,54 +2567,67 @@ export default function AdminDashboard() {
               <div className="empty-state" style={{ textAlign: 'center', padding: '48px 24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}><UserPlus size={48} style={{ color: 'var(--navy)' }} /></div>
                 <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--navy)', marginBottom: '8px' }}>No registrations yet</div>
-                <div style={{ fontSize: '14px', color: 'var(--gray)' }}>Alumni registrations will appear here once submitted.</div>
+                <div style={{ fontSize: '14px', color: 'var(--gray)' }}>Alumni event registrations will appear here once people sign up.</div>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto', width: '100%', maxWidth: '100%' }} className="admin-table-responsive">
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
-                  <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--lgray)' }}>
-                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Registrant</th>
-                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Event</th>
-                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Batch / Branch</th>
-                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Paid</th>
-                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Status</th>
-                      <th style={{ padding: '12px 10px', fontSize: 13, color: 'var(--gray)' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registrations.map((registration) => {
-                      const alumnus = registration.alumni?.user;
-                      const batch = registration.alumni?.batch;
-                      const branch = registration.alumni?.branch;
-                      return (
-                        <tr key={registration.id} style={{ borderBottom: '1px solid var(--lgray)' }}>
-                          <td style={{ padding: '12px 10px' }}>
-                            <div style={{ fontWeight: 700, color: 'var(--navy)', fontSize: 13 }}>{alumnus?.firstName || 'Alumnus'} {alumnus?.lastName || ''}</div>
-                            <div style={{ fontSize: 11, color: 'var(--gray)' }}>{alumnus?.email || 'No email'}</div>
-                          </td>
-                          <td style={{ padding: '12px 10px', fontSize: 12 }}>{registration.event?.title || 'Unknown event'}</td>
-                          <td style={{ padding: '12px 10px', fontSize: 12 }}>
-                            {batch?.name || (batch?.year ? `Batch ${batch.year}` : 'No batch')}
-                            {branch?.name ? ` · ${branch.name}` : ''}
-                          </td>
-                          <td style={{ padding: '12px 10px', fontSize: 12 }}>${Number(registration.paidAmount ?? 0).toFixed(2)}</td>
-                          <td style={{ padding: '12px 10px' }}>
-                            <span className={`status-badge ${String(registration.status || 'PENDING').toLowerCase()}`} style={{ textTransform: 'capitalize', fontSize: 11, padding: '2px 8px' }}>{String(registration.status || 'PENDING').toLowerCase()}</span>
-                          </td>
-                          <td style={{ padding: '12px 10px' }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                              <button className="btn btn-sm btn-navy" onClick={() => handleUpdateRegistrationStatus(registration.id, 'APPROVED')} style={{ padding: '4px 8px', fontSize: 11 }}>Approve</button>
-                              <button className="btn btn-sm btn-gold" onClick={() => handleUpdateRegistrationStatus(registration.id, 'FLAGGED')} style={{ padding: '4px 8px', fontSize: 11 }}>Flag</button>
-                              <button className="btn btn-sm" onClick={() => handleUpdateRegistrationStatus(registration.id, 'DECLINED')} style={{ padding: '4px 8px', fontSize: 11, background: '#f8d7da', color: '#842029', border: '1px solid #f5c2c7' }}>Decline</button>
-                              <button className="btn btn-sm btn-danger" onClick={() => openDeleteModal('registration', registration.id, 'Delete registration?', 'This action will remove this registration permanently.') } style={{ padding: '4px 8px', fontSize: 11 }}>Delete</button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                {registrations.map((reg) => {
+                  const status = String(reg.status || 'PENDING');
+                  const statusStyle = {
+                    PENDING: { background: 'rgba(250, 204, 21, 0.12)', color: '#a16207', border: '1px solid rgba(250, 204, 21, 0.25)' },
+                    APPROVED: { background: 'rgba(52, 211, 153, 0.12)', color: '#047857', border: '1px solid rgba(52, 211, 153, 0.25)' },
+                    FLAGGED: { background: 'rgba(251, 146, 60, 0.12)', color: '#c2410c', border: '1px solid rgba(251, 146, 60, 0.25)' },
+                    DECLINED: { background: 'rgba(239, 68, 68, 0.12)', color: '#b91c1c', border: '1px solid rgba(239, 68, 68, 0.25)' },
+                  }[status] || { background: 'rgba(148, 163, 184, 0.12)', color: '#475569', border: '1px solid rgba(148, 163, 184, 0.25)' };
+
+                  const responses = reg.responses && typeof reg.responses === 'object' ? reg.responses : {};
+                  const responseEntries = Object.entries(responses as Record<string, unknown>).slice(0, 3);
+
+                  return (
+                    <div key={reg.id} className="card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--navy)' }}>{reg.event?.title || 'Event registration'}</div>
+                          <div style={{ fontSize: 12, color: 'var(--gray)' }}>#{reg.id.slice(0, 8)}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button className="del-btn" onClick={() => openDeleteModal('registration', reg.id, 'Delete registration?', 'This action will remove this event registration from the admin queue.')}><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gap: '8px', fontSize: 13, color: 'var(--gray)' }}>
+                        <div><strong style={{ color: 'var(--navy)' }}>Alumni:</strong> {reg.alumni?.user ? `${reg.alumni.user.firstName || ''} ${reg.alumni.user.lastName || ''}`.trim() || reg.alumni.user.email : 'Unknown'}</div>
+                        <div><strong style={{ color: 'var(--navy)' }}>Email:</strong> {reg.alumni?.user?.email || 'N/A'}</div>
+                        <div><strong style={{ color: 'var(--navy)' }}>Batch:</strong> {reg.alumni?.batch?.name || 'N/A'}</div>
+                        <div><strong style={{ color: 'var(--navy)' }}>Branch:</strong> {reg.alumni?.branch?.name || 'N/A'}</div>
+                      </div>
+
+                      {responseEntries.length > 0 && (
+                        <div style={{ padding: '10px 12px', background: 'var(--off)', borderRadius: '10px', border: '1px solid var(--lgray)', fontSize: 12, color: 'var(--gray)' }}>
+                          <div style={{ fontWeight: 700, color: 'var(--navy)', marginBottom: '6px' }}>Responses</div>
+                          <div style={{ display: 'grid', gap: '4px' }}>
+                            {responseEntries.map(([key, value]) => (
+                              <div key={key}><strong>{key}:</strong> {String(value)}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ ...statusStyle, padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
+                          {status}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--gray)' }}>{new Date(reg.createdAt).toLocaleDateString()}</span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                        <button className="btn btn-gold btn-sm" onClick={() => handleUpdateRegistrationStatus(reg.id, 'APPROVED')}>Approve</button>
+                        <button className="btn btn-sm" style={{ background: 'rgba(251,146,60,0.12)', color: '#c2410c', border: '1px solid rgba(251,146,60,0.2)' }} onClick={() => handleUpdateRegistrationStatus(reg.id, 'FLAGGED')}>Flag</button>
+                        <button className="btn btn-sm" style={{ background: 'rgba(239,68,68,0.12)', color: '#b91c1c', border: '1px solid rgba(239,68,68,0.2)' }} onClick={() => handleUpdateRegistrationStatus(reg.id, 'DECLINED')}>Decline</button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

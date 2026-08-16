@@ -361,6 +361,475 @@ body.alumni-portal{padding-bottom:0;}
     order:1;
   }
 }
+
+/* Payment Modal Styles */
+.payment-modal{
+  max-width:520px;
+}
+.payment-icon{
+  background:linear-gradient(135deg, var(--gold), var(--gold2));
+  color:var(--navy);
+}
+.payment-modal-body{
+  padding:20px 22px 22px;
+}
+.payment-modal .alumni-form-actions{
+  padding:0 4px 8px;
+}
+.payment-info-box{
+  background:linear-gradient(135deg, rgba(200,150,12,0.1), rgba(200,150,12,0.05));
+  border:1px solid rgba(200,150,12,0.2);
+  border-radius:12px;
+  padding:16px;
+  margin-bottom:20px;
+}
+.payment-info-label{
+  font-size:15px;
+  font-weight:800;
+  color:var(--navy);
+  margin-bottom:4px;
+}
+.payment-info-sub{
+  font-size:13px;
+  color:var(--gray);
+}
+.payment-select{
+  width:100%;
+  padding:14px 16px;
+  border:2px solid var(--lgray);
+  border-radius:12px;
+  font-size:14px;
+  background:#fff;
+  color:var(--dark);
+  transition:border-color 0.2s;
+}
+.payment-select:focus{
+  outline:none;
+  border-color:var(--navy);
+}
+.payment-details{
+  background:var(--off);
+  border-radius:12px;
+  padding:16px;
+  margin-bottom:20px;
+}
+.payment-detail-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 0;
+  border-bottom:1px solid var(--lgray);
+}
+.payment-detail-item:last-child{
+  border-bottom:none;
+}
+.payment-detail-label{
+  font-size:13px;
+  color:var(--gray);
+  font-weight:600;
+}
+.payment-detail-value{
+  font-size:14px;
+  color:var(--navy);
+  font-weight:700;
+}
+.payment-amount{
+  color:var(--navy);
+  font-size:16px;
+}
+.payment-note{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 14px;
+  background:rgba(0,43,107,0.05);
+  border:1px solid rgba(0,43,107,0.1);
+  border-radius:10px;
+  font-size:13px;
+  color:var(--navy);
+  line-height:1.5;
+}
+@media (max-width:768px){
+  .payment-modal{
+    max-width:90vw;
+  }
+  .payment-details{
+    padding:12px;
+  }
+  .payment-detail-item{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
+  }
+}
+
+/* Alumni Directory Styles */
+.directory-page{
+  max-width:1200px;
+  margin:0 auto;
+  padding:0 20px 40px;
+}
+.directory-header{
+  margin-bottom:24px;
+}
+.directory-title{
+  font-size:28px;
+  font-weight:800;
+  color:var(--navy);
+  margin:0 0 8px;
+}
+.directory-subtitle{
+  font-size:15px;
+  color:var(--gray);
+  margin:0;
+}
+.directory-search-bar{
+  display:flex;
+  gap:12px;
+  margin-bottom:24px;
+  flex-wrap:wrap;
+}
+.search-input-wrapper{
+  flex:1;
+  min-width:280px;
+  position:relative;
+}
+.search-icon{
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--gray);
+  pointer-events:none;
+}
+.search-input{
+  width:100%;
+  padding:14px 14px 14px 44px;
+  border:2px solid var(--lgray);
+  border-radius:12px;
+  font-size:14px;
+  transition:border-color 0.2s;
+}
+.search-input:focus{
+  outline:none;
+  border-color:var(--navy);
+}
+.filter-select{
+  padding:14px 16px;
+  border:2px solid var(--lgray);
+  border-radius:12px;
+  font-size:14px;
+  background:#fff;
+  color:var(--dark);
+  min-width:140px;
+  cursor:pointer;
+}
+.filter-select:focus{
+  outline:none;
+  border-color:var(--navy);
+}
+.directory-content{
+  min-height:300px;
+}
+.directory-loading{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:60px 20px;
+  color:var(--gray);
+  font-weight:600;
+  font-size:15px;
+}
+.directory-empty{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:80px 20px;
+  text-align:center;
+}
+.directory-empty-icon{
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  background:var(--off);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--gray);
+  margin-bottom:20px;
+}
+.directory-empty-title{
+  font-size:18px;
+  font-weight:700;
+  color:var(--navy);
+  margin-bottom:8px;
+}
+.directory-empty-sub{
+  font-size:14px;
+  color:var(--gray);
+}
+.directory-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:16px;
+}
+.directory-card{
+  background:#fff;
+  border:1px solid var(--lgray);
+  border-radius:16px;
+  padding:20px;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.directory-card:hover{
+  border-color:var(--navy);
+  box-shadow:0 4px 20px rgba(0,43,107,0.1);
+  transform:translateY(-2px);
+}
+.directory-card-header{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:12px;
+}
+.directory-avatar{
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  overflow:hidden;
+  border:2px solid var(--lgray);
+  flex-shrink:0;
+}
+.directory-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.directory-avatar-placeholder{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--off);
+  color:var(--navy);
+  font-weight:700;
+  font-size:18px;
+}
+.directory-card-info{
+  flex:1;
+  min-width:0;
+}
+.directory-name{
+  font-size:15px;
+  font-weight:700;
+  color:var(--navy);
+  margin-bottom:4px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.directory-meta{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.directory-phone,
+.directory-branch{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  font-size:12px;
+  color:var(--gray);
+}
+.directory-badge{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.3px;
+  flex-shrink:0;
+}
+.directory-badge-active{
+  background:rgba(4,120,87,.12);
+  color:var(--ok);
+  border:1px solid rgba(4,120,87,.2);
+}
+.directory-badge-passive{
+  background:rgba(251,146,60,.12);
+  color:#fb923c;
+  border:1px solid rgba(251,146,60,.2);
+}
+.directory-badge-inactive{
+  background:rgba(156,163,175,.12);
+  color:#9ca3af;
+  border:1px solid rgba(156,163,175,.2);
+}
+.directory-badge-dormant{
+  background:rgba(239,68,68,.12);
+  color:#ef4444;
+  border:1px solid rgba(239,68,68,.2);
+}
+.directory-modal{
+  max-width:540px;
+}
+.directory-modal-body{
+  padding:20px 22px 22px;
+}
+.directory-profile-header{
+  display:flex;
+  gap:16px;
+  margin-bottom:24px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--lgray);
+}
+.directory-profile-avatar{
+  width:72px;
+  height:72px;
+  border-radius:50%;
+  overflow:hidden;
+  border:3px solid var(--navy);
+  flex-shrink:0;
+}
+.directory-profile-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.directory-profile-info{
+  flex:1;
+}
+.directory-profile-name{
+  font-size:18px;
+  font-weight:800;
+  color:var(--navy);
+  margin:0 0 12px;
+}
+.directory-profile-meta{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-bottom:12px;
+}
+.directory-profile-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.directory-profile-label{
+  font-size:12px;
+  color:var(--gray);
+  font-weight:600;
+}
+.directory-profile-value{
+  font-size:13px;
+  color:var(--navy);
+  font-weight:700;
+}
+.directory-profile-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.directory-profile-badge-active{
+  background:rgba(4,120,87,.12);
+  color:var(--ok);
+  border:1px solid rgba(4,120,87,.2);
+}
+.directory-profile-badge-passive{
+  background:rgba(251,146,60,.12);
+  color:#fb923c;
+  border:1px solid rgba(251,146,60,.2);
+}
+.directory-profile-badge-inactive{
+  background:rgba(156,163,175,.12);
+  color:#9ca3af;
+  border:1px solid rgba(156,163,175,.2);
+}
+.directory-profile-badge-dormant{
+  background:rgba(239,68,68,.12);
+  color:#ef4444;
+  border:1px solid rgba(239,68,68,.2);
+}
+.directory-section{
+  margin-bottom:20px;
+}
+.directory-section-title{
+  font-size:14px;
+  font-weight:800;
+  color:var(--navy);
+  margin:0 0 12px;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.directory-section-content{
+  font-size:14px;
+  color:var(--gray);
+  line-height:1.6;
+}
+.directory-social-links{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.directory-social-link{
+  padding:8px 16px;
+  background:var(--off);
+  border:1px solid var(--lgray);
+  border-radius:8px;
+  color:var(--navy);
+  font-size:13px;
+  font-weight:600;
+  text-decoration:none;
+  transition:all 0.2s;
+}
+.directory-social-link:hover{
+  background:var(--navy);
+  color:#fff;
+  border-color:var(--navy);
+}
+@media (max-width:768px){
+  .directory-page{
+    padding:0 16px 32px;
+  }
+  .directory-title{
+    font-size:24px;
+  }
+  .directory-search-bar{
+    flex-direction:column;
+  }
+  .search-input-wrapper,
+  .filter-select{
+    width:100%;
+  }
+  .directory-grid{
+    grid-template-columns:1fr;
+  }
+  .directory-modal{
+    max-width:90vw;
+  }
+  .directory-profile-header{
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+  }
+  .directory-profile-item{
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+  }
+}
 .alumni-modal-header{
   display:flex;align-items:center;gap:12px;padding:20px 22px 12px;
   border-bottom:1px solid rgba(0,43,107,.06);
@@ -409,7 +878,7 @@ body.alumni-portal{padding-bottom:0;}
   background:rgba(185,28,28,.08);color:var(--err);border:1px solid rgba(185,28,28,.15);
   border-radius:12px;padding:11px 13px;font-size:13px;font-weight:600;
 }
-.alumni-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:4px;flex-wrap:wrap;}
+.alumni-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:4px;flex-wrap:wrap;padding:0 4px 4px;}
 .alumni-result-panel{
   margin-top:4px;padding:16px;border-radius:14px;
   background:linear-gradient(160deg,var(--navy),var(--navy2));color:#fff;
@@ -758,6 +1227,31 @@ body:has(.landing-main){padding-bottom:0;}
   background:rgba(0,43,107,.08);color:var(--navy);border:1px solid rgba(0,43,107,.1);
 }
 .profile-badge-chapter{background:rgba(200,150,12,.15);color:var(--gold);border-color:rgba(200,150,12,.2);}
+.profile-badge-membership{
+  padding:6px 12px;
+  font-size:11px;
+  letter-spacing:0.5px;
+}
+.profile-badge-active{
+  background:rgba(4,120,87,.12);
+  color:var(--ok);
+  border:1px solid rgba(4,120,87,.2);
+}
+.profile-badge-passive{
+  background:rgba(251,146,60,.12);
+  color:#fb923c;
+  border:1px solid rgba(251,146,60,.2);
+}
+.profile-badge-inactive{
+  background:rgba(156,163,175,.12);
+  color:#9ca3af;
+  border:1px solid rgba(156,163,175,.2);
+}
+.profile-badge-dormant{
+  background:rgba(239,68,68,.12);
+  color:#ef4444;
+  border:1px solid rgba(239,68,68,.2);
+}
 
 /* Tab Navigation */
 .profile-tabs-nav{
@@ -1911,6 +2405,19 @@ body:has(.landing-main){padding-bottom:0;}
     width:calc(100% + 32px);
     max-width:calc(100% + 32px);
   }
+  .admin-cards-grid{
+    grid-template-columns:1fr !important;
+  }
+  .contribution-card{
+    padding:16px !important;
+  }
+}
+
+/* Admin Contribution Cards */
+.contribution-card:hover{
+  border-color:var(--navy);
+  box-shadow:0 4px 20px rgba(0,43,107,0.1);
+  transform:translateY(-2px);
 }
 .admin-stats-table-header{
   display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;
