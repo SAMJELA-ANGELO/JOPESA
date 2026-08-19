@@ -765,6 +765,16 @@ export default function AdminDashboard() {
           setBatches(prev => prev.filter(batch => batch.id !== deleteModal.id));
           break;
         }
+        case 'contribution': {
+          const response = await fetch(`${apiBaseUrl}/contributions/${deleteModal.id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(adminToken),
+          });
+          if (!response.ok && response.status !== 204) throw new Error('Unable to delete contribution');
+          setContributions(prev => prev.filter((contribution) => contribution.id !== deleteModal.id));
+          showToastMessage('Contribution deleted successfully.', 'success');
+          break;
+        }
         case 'registration': {
           const response = await fetch(`${apiBaseUrl}/admin/registrations/${deleteModal.id}`, {
             method: 'DELETE',
@@ -2581,7 +2591,10 @@ export default function AdminDashboard() {
                   }[status] || { background: 'rgba(148, 163, 184, 0.12)', color: '#475569', border: '1px solid rgba(148, 163, 184, 0.25)' };
 
                   const responses = reg.responses && typeof reg.responses === 'object' ? reg.responses : {};
-                  const responseEntries = Object.entries(responses as Record<string, unknown>).slice(0, 3);
+                  const identityResponseKeys = new Set(['alumni', 'alumniname', 'name', 'fullname', 'email', 'batch', 'branch']);
+                  const responseEntries = Object.entries(responses as Record<string, unknown>)
+                    .filter(([key]) => !identityResponseKeys.has(key.toLowerCase().replace(/[^a-z]/g, '')))
+                    .slice(0, 3);
 
                   return (
                     <div key={reg.id} className="card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -2602,7 +2615,7 @@ export default function AdminDashboard() {
                         <div><strong style={{ color: 'var(--navy)' }}>Branch:</strong> {reg.alumni?.branch?.name || 'N/A'}</div>
                       </div>
 
-                      {responseEntries.length > 0 && (
+                      {/* {responseEntries.length > 0 && (
                         <div style={{ padding: '10px 12px', background: 'var(--off)', borderRadius: '10px', border: '1px solid var(--lgray)', fontSize: 12, color: 'var(--gray)' }}>
                           <div style={{ fontWeight: 700, color: 'var(--navy)', marginBottom: '6px' }}>Responses</div>
                           <div style={{ display: 'grid', gap: '4px' }}>
@@ -2611,7 +2624,7 @@ export default function AdminDashboard() {
                             ))}
                           </div>
                         </div>
-                      )}
+                      )} */}
 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                         <span style={{ ...statusStyle, padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
