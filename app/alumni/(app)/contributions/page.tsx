@@ -4,13 +4,13 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, formatDate, getApiBase, getAlumniToken, unwrapList } from '@/lib/api';
 import { Contribution } from '@/types';
+import Toast from '@/components/Toast';
 
 export default function AlumniContributionsPage() {
   const router = useRouter();
   const paymentPanelRef = useRef<HTMLDivElement>(null);
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [selectedInstallmentId, setSelectedInstallmentId] = useState('');
   const [amount, setAmount] = useState('');
@@ -18,7 +18,11 @@ export default function AlumniContributionsPage() {
   const [message, setMessage] = useState('');
   const [redirectUrl, setRedirectUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState('');
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'warning' | 'error' }>({ show: false, message: '', type: 'success' });
+
+  const showToast = (message: string, type: 'success' | 'warning' | 'error') => {
+    setToast({ show: true, message, type });
+  };
 
   useEffect(() => {
     const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('jopesa_user') || '{}') : {};
@@ -28,14 +32,13 @@ export default function AlumniContributionsPage() {
 
     const loadContributions = async () => {
       setLoading(true);
-      setError('');
       try {
         const payload = await apiFetch<Contribution[]>('/contributions?skip=0&take=100');
         const contributionsList = unwrapList<Contribution>(payload);
         setContributions(contributionsList);
       } catch (err) {
         console.error(err);
-        setError(err instanceof Error ? err.message : 'Unable to load contributions');
+        showToast(err instanceof Error ? err.message : 'Unable to load contributions', 'error');
       } finally {
         setLoading(false);
       }
@@ -43,6 +46,12 @@ export default function AlumniContributionsPage() {
 
     loadContributions();
   }, []);
+
+  useEffect(() => {
+    if (!toast.show) return;
+    const timer = window.setTimeout(() => setToast((current) => ({ ...current, show: false })), 3500);
+    return () => window.clearTimeout(timer);
+  }, [toast.show]);
 
   // Handle pre-selected contribution from event registration
   useEffect(() => {
@@ -66,9 +75,6 @@ export default function AlumniContributionsPage() {
     setSelectedInstallmentId(contribution.installments?.[0]?.id || '');
     setAmount(contribution.installments?.[0]?.amount?.toString() || '');
     setMessage(`Payment for ${contribution.title}`);
-    setSuccess('');
-    setError('');
-    
     // Scroll to payment form on mobile
     if (window.innerWidth < 768 && paymentPanelRef.current) {
       paymentPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -78,17 +84,14 @@ export default function AlumniContributionsPage() {
   const handleInitiate = async () => {
     if (!selectedContribution) return;
     if (!selectedInstallmentId) {
-      setError('Please select an installment.');
+      showToast('Please select an installment.', 'warning');
       return;
     }
     setSubmitting(true);
-    setError('');
-    setSuccess('');
 
     try {
       const payload = {
         installmentId: selectedInstallmentId,
-        amount: Number(amount),
         phone,
         redirectUrl: redirectUrl || `${window.location.origin}/alumni/profile`,
         message,
@@ -103,20 +106,20 @@ export default function AlumniContributionsPage() {
       const transId = result?.transId || result?.data?.transId || result?.transactionId || result?.data?.transactionId;
 
       if (checkoutLink) {
-        setSuccess('Fapshi checkout link ready. Redirecting…');
+        showToast('Fapshi checkout link ready. Redirecting...', 'success');
         window.location.assign(checkoutLink);
         return;
       }
 
       if (transId) {
-        setSuccess(`Payment initiated successfully. Reference: ${transId}`);
+        showToast(`Payment initiated successfully. Reference: ${transId}`, 'success');
         return;
       }
 
-      setSuccess('Payment initiated. Please follow the payment instructions.');
+      showToast('Payment initiated. Please follow the payment instructions.', 'success');
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Unable to initiate payment');
+      showToast(err instanceof Error ? err.message : 'Unable to initiate payment', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -138,7 +141,6 @@ export default function AlumniContributionsPage() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }} className="contributions-grid">
           <div>
-            {error && <div style={{ marginBottom: 16, color: 'var(--err)', padding: 12, background: '#fee2e2', borderRadius: 8 }}>{error}</div>}
             {contributions.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 40, color: 'var(--gray)' }}>No available contributions at this time.</div>
             ) : (
@@ -215,8 +217,10 @@ export default function AlumniContributionsPage() {
                   <input
                     type="number"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--lgray)', fontSize: 14 }}
+                    readOnly
+                    aria-readonly="true"
+                    tabIndex={-1}
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--lgray)', fontSize: 14, background: '#f3f4f6', color: 'var(--dark)', cursor: 'not-allowed' }}
                   />
                 </div>
                 <div style={{ marginBottom: 16 }}>
@@ -238,8 +242,6 @@ export default function AlumniContributionsPage() {
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--lgray)', resize: 'vertical', fontSize: 14 }}
                   />
                 </div>
-                {error && <div style={{ marginBottom: 12, color: 'var(--err)', fontSize: 13, padding: 10, background: '#fee2e2', borderRadius: 8 }}>{error}</div>}
-                {success && <div style={{ marginBottom: 12, color: 'var(--succ)', fontSize: 13, padding: 10, background: '#dcfce7', borderRadius: 8 }}>{success}</div>}
                 <button
                   onClick={handleInitiate}
                   disabled={submitting}
@@ -267,6 +269,7 @@ export default function AlumniContributionsPage() {
           </div>
         </div>
       )}
+      <Toast show={toast.show} message={toast.message} type={toast.type} />
     </div>
   );
 }
