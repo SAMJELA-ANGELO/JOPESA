@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import { Button } from '@heroui/react';
 import AuthCard from '@/components/AuthCard';
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -69,39 +70,27 @@ export default function AlumniLoginPage() {
     >
       <div className="fg" style={{ marginBottom: '16px' }}>
         <label>Email Address</label>
-        <div style={{ position: 'relative' }}>
-          <Mail size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray)' }} />
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="Enter your alumni email"
-            style={{ paddingLeft: '42px' }}
-            required
-          />
-        </div>
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="Enter your alumni email"
+          required
+        />
       </div>
 
       <div className="fg" style={{ marginBottom: '24px' }}>
         <label>Password</label>
-        <div style={{ position: 'relative' }}>
-          <Lock size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray)' }} />
-          <input
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="••••••••"
-            style={{ paddingLeft: '42px', paddingRight: '42px' }}
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gray)', display: 'flex', alignItems: 'center' }}
-          >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        </div>
+        <input
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="••••••••"
+          required
+        />
+        <Button isIconOnly type="button" variant="tertiary" aria-label={showPassword ? 'Hide password' : 'Show password'} onPress={() => setShowPassword(!showPassword)}>
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </Button>
       </div>
     </AuthCard>
   );

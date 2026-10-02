@@ -1,3 +1,6 @@
+import { useEffect } from 'react';
+import { toast } from '@heroui/react';
+
 interface ToastProps {
   show: boolean;
   message: string;
@@ -5,13 +8,16 @@ interface ToastProps {
 }
 
 export default function Toast({ show, message, type = 'success' }: ToastProps) {
-  if (!show) return null;
+  useEffect(() => {
+    if (!show || !message) return;
 
-  const tone = type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'success';
+    const title = type === 'error' ? 'Error' : type === 'warning' ? 'Notice' : 'Success';
+    const options = { description: message, timeout: 3500 };
 
-  return (
-    <div id="toast" className={`show ${tone}`}>
-      {message}
-    </div>
-  );
+    if (type === 'error') toast.danger(title, options);
+    else if (type === 'warning') toast.warning(title, options);
+    else toast.success(title, options);
+  }, [show, message, type]);
+
+  return null;
 }

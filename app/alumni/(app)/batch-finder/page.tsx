@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { AlertTriangle, Star, Search, Calendar, GraduationCap, Clock } from 'lucide-react';
+import HeroSelect from '@/components/HeroSelect';
 import { getBatchInfo, maxClass, updateYearHint, CLASS_NAMES, SY } from '@/lib/batchUtils';
 import { BatchInfo } from '@/types';
 
@@ -99,24 +100,27 @@ export default function AlumniBatchFinderPage() {
           <div className="batch-finder-field">
             <label className="batch-finder-label">Class at entry</label>
             <div className="batch-finder-select-wrap">
-              <select
+              <HeroSelect
                 className="batch-finder-input"
-                value={cIn}
-                onChange={(e) => {
-                  setCIn(e.target.value === '' ? '' : parseInt(e.target.value));
+                value={cIn === '' ? '' : String(cIn)}
+                onChange={(value) => {
+                  setCIn(value === '' ? '' : parseInt(value));
                   setResult(null);
                   setFinderError('');
                 }}
-              >
-                <option value="">Select your class</option>
-                <option value="1">Form 1</option>
-                <option value="2">Form 2</option>
-                <option value="3">Form 3</option>
-                <option value="4">Form 4</option>
-                <option value="5">Form 5</option>
-                <option value="6">Lower Sixth (LS6)</option>
-                <option value="7">Upper Sixth (US6)</option>
-              </select>
+                ariaLabel="Class at entry"
+                placeholder="Select your class"
+                options={[
+                  { value: '', label: 'Select your class' },
+                  { value: '1', label: 'Form 1' },
+                  { value: '2', label: 'Form 2' },
+                  { value: '3', label: 'Form 3' },
+                  { value: '4', label: 'Form 4' },
+                  { value: '5', label: 'Form 5' },
+                  { value: '6', label: 'Lower Sixth (LS6)' },
+                  { value: '7', label: 'Upper Sixth (US6)' },
+                ]}
+              />
             </div>
           </div>
 

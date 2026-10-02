@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { LoaderCircle, X, ClipboardList, CreditCard } from 'lucide-react';
+import { Button } from '@heroui/react';
 import { FormField } from '@/types';
 import { apiFetch, getApiBase, getAlumniToken } from '@/lib/api';
-import { useEffect } from 'react';
 
 interface EventRegistrationModalProps {
   open: boolean;
@@ -16,18 +16,6 @@ interface EventRegistrationModalProps {
   onPaymentClick?: () => void;
   hasPayment: boolean;
 }
-
-const fieldInputStyle: CSSProperties = {
-  width: '100%',
-  padding: '13px 14px',
-  border: '1.5px solid var(--lgray)',
-  borderRadius: 12,
-  fontSize: 15,
-  fontFamily: 'inherit',
-  color: 'var(--dark)',
-  background: '#fff',
-  outline: 'none',
-};
 
 export default function EventRegistrationModal({
   open,
@@ -42,14 +30,12 @@ export default function EventRegistrationModal({
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [loadingExisting, setLoadingExisting] = useState(false);
 
   const sortedFields = useMemo(() => fields || [], [fields]);
 
   useEffect(() => {
     let mounted = true;
     const loadExisting = async () => {
-      setLoadingExisting(true);
       try {
         const token = getAlumniToken();
         if (!token) return;
@@ -59,15 +45,12 @@ export default function EventRegistrationModal({
         if (!res.ok) return;
         const payload = await res.json().catch(() => ({}));
         if (!mounted) return;
-        // payload may contain `responses` object
         if (payload && typeof payload === 'object' && (payload.responses || payload.data)) {
           const existing = (payload.responses || payload.data || payload) as Record<string, unknown>;
           setValues(existing);
         }
       } catch (err) {
         // ignore
-      } finally {
-        setLoadingExisting(false);
       }
     };
 
@@ -78,14 +61,6 @@ export default function EventRegistrationModal({
 
   const setValue = (id: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [id]: value }));
-  };
-
-  const toggleCheckbox = (id: string, optionValue: string) => {
-    const current = Array.isArray(values[id]) ? (values[id] as string[]) : [];
-    const next = current.includes(optionValue)
-      ? current.filter((item) => item !== optionValue)
-      : [...current, optionValue];
-    setValue(id, next);
   };
 
   const uploadFile = async (file: File) => {
@@ -192,62 +167,61 @@ export default function EventRegistrationModal({
               {field.type === 'textarea' ? (
                 <textarea
                   value={(values[field.id] as string) || ''}
-                  onChange={(e) => setValue(field.id, e.target.value)}
+                  onChange={(event) => setValue(field.id, event.target.value)}
                   placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
                   required={field.required}
                   rows={4}
-                  className="alumni-input"
-                  style={{ ...fieldInputStyle, resize: 'vertical', minHeight: 110 }}
+                  className="w-full"
                 />
               ) : field.type === 'select' ? (
-                <div className="alumni-select-wrap">
-                  <select
-                    value={(values[field.id] as string) || ''}
-                    onChange={(e) => setValue(field.id, e.target.value)}
-                    required={field.required}
-                    className="alumni-input"
-                    style={fieldInputStyle}
-                  >
-                    <option value="">Select an option</option>
-                    {(field.options || []).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : field.type === 'radio' ? (
-                <div className="alumni-option-list">
+                <select
+                  aria-label={field.label}
+                  value={(values[field.id] as string | undefined) || ''}
+                  onChange={(event) => setValue(field.id, event.target.value)}
+                  required={field.required}
+                  className="w-full"
+                >
+                  <option value="" disabled>Select an option</option>
                   {(field.options || []).map((option) => (
-                    <label
-                      key={option.value}
-                      className={`alumni-option ${values[field.id] === option.value ? 'active' : ''}`}
-                    >
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              ) : field.type === 'radio' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {(field.options || []).map((option) => (
+                    <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input
                         type="radio"
                         name={field.id}
+                        value={option.value}
                         checked={values[field.id] === option.value}
                         onChange={() => setValue(field.id, option.value)}
                         required={field.required}
+                        style={{ width: 'auto', padding: 0, border: 0, appearance: 'auto' }}
                       />
-                      <span>{option.label}</span>
+                      {option.label}
                     </label>
                   ))}
                 </div>
               ) : field.type === 'checkbox' ? (
-                <div className="alumni-option-list">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {(field.options || []).map((option) => {
-                    const selected = Array.isArray(values[field.id])
-                      ? (values[field.id] as string[]).includes(option.value)
-                      : false;
+                    const selectedValues = Array.isArray(values[field.id]) ? values[field.id] as string[] : [];
                     return (
-                      <label key={option.value} className={`alumni-option ${selected ? 'active' : ''}`}>
+                      <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <input
                           type="checkbox"
-                          checked={selected}
-                          onChange={() => toggleCheckbox(field.id, option.value)}
+                          value={option.value}
+                          checked={selectedValues.includes(option.value)}
+                          onChange={(event) => {
+                            const nextValues = event.target.checked
+                              ? [...selectedValues, option.value]
+                              : selectedValues.filter((value) => value !== option.value);
+                            setValue(field.id, nextValues);
+                          }}
+                          style={{ width: 'auto', padding: 0, border: 0, appearance: 'auto' }}
                         />
-                        <span>{option.label}</span>
+                        {option.label}
                       </label>
                     );
                   })}
@@ -256,7 +230,7 @@ export default function EventRegistrationModal({
                 <div className="alumni-file-box">
                   <input
                     type="file"
-                    onChange={(e) => setValue(field.id, e.target.files?.[0] || null)}
+                    onChange={(event) => setValue(field.id, event.target.files?.[0] || null)}
                     required={field.required}
                   />
                   <span>
@@ -275,11 +249,10 @@ export default function EventRegistrationModal({
                           : 'text'
                   }
                   value={(values[field.id] as string | number | undefined) ?? ''}
-                  onChange={(e) => setValue(field.id, e.target.value)}
+                  onChange={(event) => setValue(field.id, event.target.value)}
                   placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
                   required={field.required}
-                  className="alumni-input"
-                  style={fieldInputStyle}
+                  className="w-full"
                 />
               )}
             </div>
@@ -296,7 +269,7 @@ export default function EventRegistrationModal({
                 <CreditCard size={16} style={{ marginRight: 6 }} /> Make Payment
               </button>
             )}
-            <button type="submit" className="alumni-btn alumni-btn-primary" disabled={submitting}>
+            <Button type="submit" variant="primary" isDisabled={submitting}>
               {submitting ? (
                 <>
                   <LoaderCircle size={16} className="loading-spinner" /> Submitting...
@@ -304,7 +277,7 @@ export default function EventRegistrationModal({
               ) : (
                 'Submit registration'
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

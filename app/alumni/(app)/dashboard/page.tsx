@@ -19,6 +19,14 @@ import { Announcement, Document, Event, Branch, Photo } from '@/types';
 import { apiFetch, formatDateRange, unwrapList } from '@/lib/api';
 import { downloadFile } from '@/lib/download';
 
+const isPastEvent = (event: Event, currentTime: number | null) => {
+  if (event.status === 'COMPLETED' || event.status === 'CANCELLED' || event.status === 'past') return true;
+  const endDate = new Date(event.endDate || event.startDate);
+  if (Number.isNaN(endDate.getTime())) return false;
+  endDate.setHours(23, 59, 59, 999);
+  return currentTime !== null && endDate.getTime() < currentTime;
+};
+
 export default function AlumniDashboardPage() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
@@ -28,6 +36,12 @@ export default function AlumniDashboardPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setCurrentTime(Date.now()), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -36,7 +50,7 @@ export default function AlumniDashboardPage() {
       try {
         const [eventsPayload, photosPayload, announcementsPayload, documentsPayload, branchesPayload] =
           await Promise.all([
-            apiFetch(`/events?skip=0&take=50&status=PUBLISHED`),
+            apiFetch(`/events?skip=0&take=100&status=PUBLISHED,COMPLETED`),
             apiFetch(`/photos?skip=0&take=100`),
             apiFetch(`/announcements?skip=0&take=20`),
             apiFetch(`/documents?skip=0&take=12`),
@@ -87,24 +101,27 @@ export default function AlumniDashboardPage() {
   }, []);
 
   const carouselSlides = useMemo<CarouselSlide[]>(() => {
-    return photos.slice(0, 12).map((photo) => ({
-      id: photo.id,
-      url: photo.url,
-      title: photo.event?.title || photo.eventTitle || 'Event photo',
-      eventId: photo.eventId,
+    return events.map((event) => ({
+      id: event.id,
+      url: event.image || event.images?.[0] || photos.find((photo) => photo.eventId === event.id)?.url || '',
+      title: event.title,
+      eventId: event.id,
+      status: isPastEvent(event, currentTime) ? 'Past' : 'Upcoming',
+      date: formatDateRange(event.startDate, event.endDate),
+      location: event.location || 'Location TBA',
     }));
-  }, [photos]);
+  }, [events, photos, currentTime]);
 
-  const upcomingEvents = useMemo(() => {
-    const now = Date.now();
-    return [...events]
-      .filter((event) => {
-        const start = new Date(event.startDate).getTime();
-        return !Number.isNaN(start) ? start >= now : event.status !== 'COMPLETED' && event.status !== 'past';
-      })
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-      .slice(0, 4);
-  }, [events]);
+  const dashboardEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      const aPast = isPastEvent(a, currentTime);
+      const bPast = isPastEvent(b, currentTime);
+      if (aPast !== bPast) return aPast ? 1 : -1;
+      const aStart = new Date(a.startDate).getTime();
+      const bStart = new Date(b.startDate).getTime();
+      return aPast ? bStart - aStart : aStart - bStart;
+    });
+  }, [events, currentTime]);
 
   const pinnedOrRecentNews = useMemo(() => {
     return [...announcements]
@@ -149,16 +166,17 @@ export default function AlumniDashboardPage() {
 
       <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-2">
         <SectionHeader
-          title="Upcoming events"
-          subtitle="Register and stay connected with campus reunions"
+          title="Events"
+          subtitle="Upcoming and past events from the alumni network"
           href="/alumni/events"
         />
-        {upcomingEvents.length === 0 ? (
-          <div className="alumni-card">No upcoming events right now. Check back soon.</div>
+        {dashboardEvents.length === 0 ? (
+          <div className="alumni-card">No events yet.</div>
         ) : (
           <div className="alumni-grid-2">
-            {upcomingEvents.map((event, index) => {
+            {dashboardEvents.map((event, index) => {
               const cover = eventCover(event.id);
+              const past = isPastEvent(event, currentTime);
               return (
                 <div
                   key={event.id}
@@ -183,6 +201,18 @@ export default function AlumniDashboardPage() {
                     </div>
                   )}
                   <div style={{ padding: 16 }}>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '4px 9px',
+                      borderRadius: 999,
+                      background: past ? 'rgba(107, 114, 128, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                      color: past ? '#6b7280' : '#047857',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      marginBottom: 8,
+                    }}>
+                      {past ? 'Past' : 'Upcoming'}
+                    </span>
                     <div style={{ fontWeight: 800, color: 'var(--navy)', fontSize: 16, marginBottom: 8 }}>
                       {event.title}
                     </div>
@@ -284,7 +314,7 @@ export default function AlumniDashboardPage() {
                   <div style={{ fontSize: 12, color: 'var(--gray)' }}>{doc.category || 'General'}</div>
                 </div>
                 <button
-                  onClick={() => downloadFile(doc.fileUrl, doc.title)}
+                  onClick={() => downloadFile(doc.fileUrl, doc.title, doc.fileType || doc.type)}
                   style={{
                     marginTop: 'auto',
                     display: 'inline-flex',

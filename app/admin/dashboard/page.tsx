@@ -5,8 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Shield, Users, Calendar, FileText, LogOut, Plus, Trash2, Calendar as CalendarIcon, Megaphone, FileText as FileIcon, Building2, X, Menu, MapPin, UserPlus, Clock, Image as ImageIcon, ExternalLink, LoaderCircle, GraduationCap, BarChart3, DollarSign, CreditCard } from 'lucide-react';
 import { User, Event, Announcement, Document, Branch, Photo, Batch } from '@/types';
 import Toast from '@/components/Toast';
+import PhotoCarousel, { CarouselSlide } from '@/components/alumni/PhotoCarousel';
+import HeroSelect from '@/components/HeroSelect';
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+type AdminSection = 'overview' | 'events' | 'announcements' | 'documents' | 'branches' | 'photos' | 'batches' | 'statistics' | 'registrations' | 'contributions';
+const adminSections: AdminSection[] = ['overview', 'events', 'announcements', 'documents', 'branches', 'photos', 'batches', 'statistics', 'registrations', 'contributions'];
+const isPastEvent = (event: Event, currentTime: number) => {
+  if (event.status === 'COMPLETED' || event.status === 'CANCELLED' || event.status === 'past') return true;
+  const endDate = new Date(event.endDate || event.startDate);
+  if (Number.isNaN(endDate.getTime())) return false;
+  endDate.setHours(23, 59, 59, 999);
+  return endDate.getTime() < currentTime;
+};
 
 const DonutChart = ({ data, size = 180, strokeWidth = 16 }: { data: Array<{ label: string; value: number; color: string }>; size?: number; strokeWidth?: number }) => {
   const total = data.reduce((sum, item) => sum + Math.max(item.value, 0), 0) || 1;
@@ -47,7 +58,8 @@ const DonutChart = ({ data, size = 180, strokeWidth = 16 }: { data: Array<{ labe
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState<'overview' | 'events' | 'announcements' | 'documents' | 'branches' | 'photos' | 'batches' | 'statistics' | 'registrations' | 'contributions'>('overview');
+  const [activeSection, setActiveSection] = useState<AdminSection>('overview');
+  const [dashboardNow, setDashboardNow] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -82,13 +94,41 @@ export default function AdminDashboard() {
   const [editingContributionId, setEditingContributionId] = useState<string | null>(null);
   const [contributionData, setContributionData] = useState({
     title: '',
-    type: 'EVENT_REGISTRATION' as 'EVENT_REGISTRATION' | 'ANNUAL_FEE' | 'GENERAL' | 'PROJECT' | 'OTHER',
+    type: 'EVENT_REGISTRATION' as 'EVENT_REGISTRATION' | 'ANNUAL_FEE' | 'GENERAL' | 'DONATION' | 'PROJECT' | 'OTHER',
     description: '',
     eventId: '' as string,
     installments: [] as Array<{ id: string; label: string; amount: number; dueDate: string }>,
     status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
   });
   const [paymentModal, setPaymentModal] = useState<{ open: boolean; contributionId: string | null; contributionTitle: string }>({ open: false, contributionId: null, contributionTitle: '' });
+
+  const changeActiveSection = (section: AdminSection) => {
+    if (section === activeSection) return;
+    window.history.pushState({ ...window.history.state, adminDashboardSection: section }, '', window.location.href);
+    setActiveSection(section);
+  };
+
+  useEffect(() => {
+    const nowTimer = window.setTimeout(() => setDashboardNow(Date.now()), 0);
+    window.history.replaceState({ ...window.history.state, adminDashboardSection: 'overview' }, '', window.location.href);
+
+    const handlePopState = (event: PopStateEvent) => {
+      const section = event.state?.adminDashboardSection;
+      if (typeof section === 'string' && adminSections.includes(section as AdminSection)) {
+        setActiveSection(section as AdminSection);
+        return;
+      }
+
+      setActiveSection('overview');
+      router.replace('/');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.clearTimeout(nowTimer);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [router]);
 
   useEffect(() => {
     const loadPayments = async () => {
@@ -138,6 +178,7 @@ export default function AdminDashboard() {
     isPinned: false,
     imageUrl: ''
   });
+  const [announcementImageFile, setAnnouncementImageFile] = useState<File | null>(null);
 
   // Document management
   const [showDocumentForm, setShowDocumentForm] = useState(false);
@@ -259,6 +300,15 @@ export default function AdminDashboard() {
   };
 
   const filteredEventsByDate = events.filter((event) => isWithinDateRange(event.startDate, dateRange.start, dateRange.end));
+  const eventCarouselSlides: CarouselSlide[] = events.map((event) => ({
+    id: event.id,
+    url: event.image || event.images?.[0] || photos.find((photo) => photo.eventId === event.id)?.url || '',
+    title: event.title,
+    eventId: event.id,
+    status: isPastEvent(event, dashboardNow ?? 0) ? 'Past' : 'Upcoming',
+    date: [event.startDate, event.endDate].filter(Boolean).join(' - '),
+    location: event.location || 'Location TBA',
+  }));
 
   const roleDistribution = [
     { label: 'Alumni', value: statsSummary.totalAlumni, color: '#f9c74f' },
@@ -356,6 +406,18 @@ export default function AdminDashboard() {
     return response.json();
   };
 
+  const uploadAnnouncementImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${apiBaseUrl}/upload/image?folder=announcements`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: formData,
+    });
+    if (!response.ok) throw new Error('Announcement image upload failed');
+    return response.json();
+  };
+
   const uploadPhotoFiles = async (files: File[]) => {
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));
@@ -391,7 +453,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const token = localStorage.getItem('jopesa_admin_token');
     if (!token) {
-      router.push('/admin');
+      router.replace('/admin');
       return;
     }
 
@@ -410,7 +472,14 @@ export default function AdminDashboard() {
           fetch(`${apiBaseUrl}/contributions?skip=0&take=200`, { headers }),
         ]);
 
-        if (!usersRes.ok || !branchesRes.ok || !eventsRes.ok || !announcementsRes.ok || !documentsRes.ok || !batchesRes.ok) {
+        const requiredResponses = [usersRes, branchesRes, eventsRes, announcementsRes, documentsRes, batchesRes];
+        if (requiredResponses.some((response) => response.status === 401)) {
+          localStorage.removeItem('jopesa_admin_token');
+          router.replace('/admin');
+          return;
+        }
+
+        if (requiredResponses.some((response) => !response.ok)) {
           throw new Error('Dashboard fetch failed');
         }
 
@@ -510,6 +579,7 @@ export default function AdminDashboard() {
           title: String((announcement as { title?: unknown }).title ?? ''),
           content: String((announcement as { content?: unknown }).content ?? ''),
           type: ((announcement as { type?: string }).type || 'NEWS') as Announcement['type'],
+          imageUrl: String((announcement as { image?: unknown }).image ?? (announcement as { imageUrl?: unknown }).imageUrl ?? ''),
           createdAt: (announcement as { createdAt?: string }).createdAt ? new Date((announcement as { createdAt?: string }).createdAt as string).toLocaleDateString() : '',
           createdBy: String((announcement as { createdBy?: unknown }).createdBy || 'Admin'),
         })));
@@ -544,8 +614,7 @@ export default function AdminDashboard() {
         }
       } catch (error) {
         console.error('Admin dashboard fetch failed:', error);
-        localStorage.removeItem('jopesa_admin_token');
-        router.push('/admin');
+        showToastMessage('Dashboard data could not be loaded. Your admin session is still active.', 'error');
       }
     };
 
@@ -582,7 +651,7 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('jopesa_admin_token');
-    router.push('/admin');
+    router.replace('/admin');
   };
 
   const showToastMessage = (message: string, type: 'success' | 'warning' | 'error' = 'success') => {
@@ -617,17 +686,37 @@ export default function AdminDashboard() {
   };
 
   const handleCreateEvent = async () => {
-    if (!eventData.title || !eventData.startDate || !eventData.endDate || !eventData.location || eventData.batchIds.length === 0) {
+    if (!eventData.title || !eventData.startDate || !eventData.endDate || !eventData.location) {
       showToastMessage('Please complete the required event fields before saving.', 'warning');
       return;
     }
 
-    setIsSavingEvent(true);
+    const submittedEventData = {
+      ...eventData,
+      batchIds: [...eventData.batchIds],
+      images: [...eventData.images],
+      registrationForm: [...eventData.registrationForm],
+    };
+    const submittedImageFiles = [...eventImageFiles];
+    const submittedEditingEventId = editingEventId;
+    const restoreEventForm = () => {
+      setEventData(submittedEventData);
+      setEventImageFiles(submittedImageFiles);
+      setEditingEventId(submittedEditingEventId);
+      setShowEventForm(true);
+    };
 
-    let images = [...eventData.images];
-    if (eventImageFiles.length > 0) {
+    setIsSavingEvent(true);
+    setShowEventForm(false);
+    setEventData({ title: '', description: '', startDate: '', endDate: '', location: '', batchIds: [], isVirtual: false, meetLink: '', images: [], status: 'upcoming', registrationForm: [], eventType: 'reunion' });
+    setEventImageFiles([]);
+    setEditingEventId(null);
+    showToastMessage('Event save started in the background.', 'success');
+
+    let images = [...submittedEventData.images];
+    if (submittedImageFiles.length > 0) {
       try {
-        const uploadResult = await uploadEventImages(eventImageFiles);
+        const uploadResult = await uploadEventImages(submittedImageFiles);
         const newUrls = Array.isArray(uploadResult)
           ? uploadResult.map((item: { url?: string; secure_url?: string }) => item.url || item.secure_url || '')
           : [uploadResult.url || uploadResult.secure_url];
@@ -635,46 +724,47 @@ export default function AdminDashboard() {
       } catch (error) {
         console.error('Images upload failed:', error);
         showToastMessage('The event images could not be uploaded. Please try again.', 'error');
+        restoreEventForm();
         setIsSavingEvent(false);
         return;
       }
     }
 
     const payload = {
-      title: eventData.title,
-      description: eventData.description,
-      startDate: new Date(eventData.startDate).toISOString(),
-      endDate: new Date(eventData.endDate).toISOString(),
-      location: eventData.location,
-      batchIds: eventData.batchIds,
-      isVirtual: eventData.isVirtual,
-      meetLink: eventData.meetLink || undefined,
+      title: submittedEventData.title,
+      description: submittedEventData.description,
+      startDate: new Date(submittedEventData.startDate).toISOString(),
+      endDate: new Date(submittedEventData.endDate).toISOString(),
+      location: submittedEventData.location,
+      batchIds: submittedEventData.batchIds,
+      isVirtual: submittedEventData.isVirtual,
+      meetLink: submittedEventData.meetLink || undefined,
       image: images.length > 0 ? images[0] : undefined,
       images: images.length > 0 ? images : undefined,
-      eventType: eventData.eventType,
-      registrationForm: eventData.registrationForm.length > 0 ? eventData.registrationForm : undefined,
-      status: eventData.status === 'past' ? 'COMPLETED' : 'PUBLISHED',
+      eventType: submittedEventData.eventType,
+      registrationForm: submittedEventData.registrationForm.length > 0 ? submittedEventData.registrationForm : undefined,
+      status: submittedEventData.status === 'past' ? 'COMPLETED' : 'PUBLISHED',
     };
 
     try {
-      if (editingEventId) {
-        const response = await fetch(`${apiBaseUrl}/events/${editingEventId}`, {
+      if (submittedEditingEventId) {
+        const response = await fetch(`${apiBaseUrl}/events/${submittedEditingEventId}`, {
           method: 'PUT',
           headers: getAuthHeaders(adminToken),
           body: JSON.stringify(payload),
         });
         if (!response.ok) {
-          throw new Error('Unable to update event');
+          const payload: { message?: string | string[] } = await response.json().catch(() => ({}));
+          throw new Error(Array.isArray(payload.message) ? payload.message.join(' ') : payload.message || 'Unable to update event');
         }
         const updatedEvent = await response.json();
-        setEvents(events.map((event) => (event.id === editingEventId ? {
+        setEvents((previous) => previous.map((event) => (event.id === submittedEditingEventId ? {
           ...event,
           ...updatedEvent,
           status: updatedEvent.status === 'COMPLETED' || updatedEvent.status === 'CANCELLED' ? 'past' : 'upcoming',
           createdAt: updatedEvent.createdAt ? new Date(updatedEvent.createdAt).toLocaleDateString() : event.createdAt,
         } : event)));
         showToastMessage('Event updated successfully.', 'success');
-        setEditingEventId(null);
       } else {
         const response = await fetch(`${apiBaseUrl}/events`, {
           method: 'POST',
@@ -682,26 +772,26 @@ export default function AdminDashboard() {
           body: JSON.stringify(payload),
         });
         if (!response.ok) {
-          throw new Error('Unable to create event');
+          const payload: { message?: string | string[] } = await response.json().catch(() => ({}));
+          throw new Error(Array.isArray(payload.message) ? payload.message.join(' ') : payload.message || 'Unable to create event');
         }
         const createdEvent = await response.json();
-        setEvents([{
+        setEvents((previous) => [{
           ...createdEvent,
           status: createdEvent.status === 'COMPLETED' || createdEvent.status === 'CANCELLED' ? 'past' : 'upcoming',
           createdAt: createdEvent.createdAt ? new Date(createdEvent.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
-        }, ...events]);
+        }, ...previous]);
         showToastMessage('Event created successfully.', 'success');
       }
     } catch (error) {
       console.error('Event save failed:', error);
-      showToastMessage('The event could not be saved. Please try again.', 'error');
+      showToastMessage(error instanceof Error ? error.message : 'The event could not be saved. Please try again.', 'error');
+      restoreEventForm();
+      return;
     } finally {
       setIsSavingEvent(false);
     }
 
-    setEventData({ title: '', description: '', startDate: '', endDate: '', location: '', batchIds: [], isVirtual: false, meetLink: '', images: [], status: 'upcoming', registrationForm: [], eventType: 'reunion' });
-    setEventImageFiles([]);
-    setShowEventForm(false);
   };
 
   const handleConfirmDelete = async () => {
@@ -868,17 +958,26 @@ export default function AdminDashboard() {
 
   const handleUploadPhotos = async () => {
     if (!selectedEventId) {
-      alert('Please select an event');
+      showToastMessage('Please select an event before uploading photos.', 'warning');
       return;
     }
     if (photoFiles.length === 0) {
-      alert('Please select at least one photo');
+      showToastMessage('Please select at least one photo to upload.', 'warning');
       return;
     }
 
+    const eventId = selectedEventId;
+    const files = [...photoFiles];
+    const previewUrls = [...photoPreviewUrls];
     try {
       setUploading(true);
-      const uploadResult = await uploadPhotoFiles(photoFiles);
+      setShowPhotoForm(false);
+      setPhotoFiles([]);
+      setPhotoPreviewUrls([]);
+      setSelectedEventId('');
+      showToastMessage('Photo upload started in the background.', 'success');
+
+      const uploadResult = await uploadPhotoFiles(files);
       const uploadedItems = Array.isArray(uploadResult) ? uploadResult : [uploadResult];
       const urls = uploadedItems
         .map((item: { url?: string; secure_url?: string }) => item.url || item.secure_url || '')
@@ -895,7 +994,7 @@ export default function AdminDashboard() {
         method: 'POST',
         headers: getAuthHeaders(adminToken),
         body: JSON.stringify({
-          eventId: selectedEventId,
+          eventId,
           urls,
           publicIds: publicIds.length === urls.length ? publicIds : undefined,
         }),
@@ -910,21 +1009,21 @@ export default function AdminDashboard() {
       const photoList = Array.isArray(createdPhotos) ? createdPhotos : normalizeList(createdPhotos);
       const mapped: Photo[] = photoList.map((photo: Record<string, unknown>) => ({
         id: String(photo.id ?? ''),
-        eventId: String(photo.eventId ?? selectedEventId),
+        eventId: String(photo.eventId ?? eventId),
         url: String(photo.url ?? ''),
         uploadedAt: photo.createdAt
           ? new Date(String(photo.createdAt)).toLocaleDateString()
           : new Date().toLocaleDateString(),
       }));
 
-      setPhotos([...mapped, ...photos]);
-      setPhotoFiles([]);
-      setPhotoPreviewUrls([]);
-      setSelectedEventId('');
-      setShowPhotoForm(false);
+      setPhotos((previous) => [...mapped, ...previous]);
       showToastMessage('Photos uploaded successfully.', 'success');
     } catch (error) {
       console.error('Photo upload failed:', error);
+      setPhotoFiles(files);
+      setPhotoPreviewUrls(previewUrls);
+      setSelectedEventId(eventId);
+      setShowPhotoForm(true);
       showToastMessage(
         error instanceof Error ? error.message : 'Failed to upload photos.',
         'error',
@@ -966,6 +1065,7 @@ export default function AdminDashboard() {
 
   const handleEditAnnouncement = (announcement: Announcement) => {
     setEditingAnnouncementId(announcement.id);
+    setAnnouncementImageFile(null);
     setAnnouncementData({
       title: announcement.title,
       content: announcement.content,
@@ -982,60 +1082,86 @@ export default function AdminDashboard() {
       return;
     }
 
+    const submittedAnnouncement = { ...announcementData };
+    const submittedImageFile = announcementImageFile;
+    const submittedEditingAnnouncementId = editingAnnouncementId;
+    if (submittedImageFile && !submittedImageFile.type.startsWith('image/')) {
+      showToastMessage('Choose a valid image file.', 'warning');
+      return;
+    }
+    if (submittedImageFile && submittedImageFile.size > 5 * 1024 * 1024 * 1024) {
+      showToastMessage('Announcement images must be 5 GB or smaller.', 'warning');
+      return;
+    }
+
     setIsSavingAnnouncement(true);
+    setShowAnnouncementForm(false);
+    setAnnouncementData({ title: '', content: '', type: 'NEWS', isPinned: false, imageUrl: '' });
+    setAnnouncementImageFile(null);
+    setEditingAnnouncementId(null);
+    showToastMessage('Announcement save started. You can continue working.', 'success');
 
     try {
-      if (editingAnnouncementId) {
-        const response = await fetch(`${apiBaseUrl}/announcements/${editingAnnouncementId}`, {
+      let imageUrl = submittedAnnouncement.imageUrl.trim();
+      if (submittedImageFile) {
+        const uploadedImage = await uploadAnnouncementImage(submittedImageFile);
+        imageUrl = uploadedImage.url || uploadedImage.secure_url || '';
+      }
+
+      if (submittedEditingAnnouncementId) {
+        const response = await fetch(`${apiBaseUrl}/announcements/${submittedEditingAnnouncementId}`, {
           method: 'PUT',
           headers: getAuthHeaders(adminToken),
           body: JSON.stringify({
-            title: announcementData.title,
-            content: announcementData.content,
-            type: announcementData.type,
-            isPinned: announcementData.isPinned,
-            image: announcementData.imageUrl || undefined,
+            title: submittedAnnouncement.title,
+            content: submittedAnnouncement.content,
+            type: submittedAnnouncement.type,
+            isPinned: submittedAnnouncement.isPinned,
+            image: imageUrl || undefined,
           }),
         });
         if (!response.ok) {
           throw new Error('Unable to update announcement');
         }
         const updatedAnnouncement = await response.json();
-        setAnnouncements(announcements.map(a => a.id === editingAnnouncementId ? {
+        setAnnouncements(previous => previous.map(a => a.id === submittedEditingAnnouncementId ? {
           ...a,
           ...updatedAnnouncement,
+          imageUrl: updatedAnnouncement.image || imageUrl,
           createdAt: updatedAnnouncement.createdAt ? new Date(updatedAnnouncement.createdAt).toLocaleDateString() : a.createdAt,
         } : a));
-        setEditingAnnouncementId(null);
       } else {
         const response = await fetch(`${apiBaseUrl}/announcements`, {
           method: 'POST',
           headers: getAuthHeaders(adminToken),
           body: JSON.stringify({
-            title: announcementData.title,
-            content: announcementData.content,
-            type: announcementData.type,
-            isPinned: announcementData.isPinned,
-            image: announcementData.imageUrl || undefined,
+            title: submittedAnnouncement.title,
+            content: submittedAnnouncement.content,
+            type: submittedAnnouncement.type,
+            isPinned: submittedAnnouncement.isPinned,
+            image: imageUrl || undefined,
           }),
         });
         if (!response.ok) {
           throw new Error('Unable to create announcement');
         }
         const newAnnouncement = await response.json();
-        setAnnouncements([{ ...newAnnouncement,
+        setAnnouncements(previous => [{ ...newAnnouncement,
+          imageUrl: newAnnouncement.image || imageUrl,
           createdAt: newAnnouncement.createdAt ? new Date(newAnnouncement.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
-        }, ...announcements]);
+        }, ...previous]);
       }
+      showToastMessage('Announcement saved successfully.', 'success');
     } catch (error) {
       console.error('Announcement save failed:', error);
+      setAnnouncementData(submittedAnnouncement);
+      setAnnouncementImageFile(submittedImageFile);
+      setEditingAnnouncementId(submittedEditingAnnouncementId);
+      setShowAnnouncementForm(true);
       showToastMessage('The announcement could not be saved. Please try again.', 'error');
     } finally {
       setIsSavingAnnouncement(false);
     }
-
-    setAnnouncementData({ title: '', content: '', type: 'NEWS', isPinned: false, imageUrl: '' });
-    setShowAnnouncementForm(false);
   };
 
   const handleCreateDocument = async () => {
@@ -1044,31 +1170,37 @@ export default function AdminDashboard() {
       return;
     }
 
+    const data = { ...documentData };
+    const file = documentFile;
     setIsCreatingDocument(true);
+    setShowDocumentForm(false);
+    setDocumentData({ title: '', description: '', category: 'General', fileType: 'OTHER', tags: '' });
+    setDocumentFile(null);
+    showToastMessage('Document upload started in the background.', 'success');
 
     try {
-      const uploadResponse = await uploadDocumentFile(documentFile);
+      const uploadResponse = await uploadDocumentFile(file);
       const fileUrl = uploadResponse.url || uploadResponse.secure_url;
-      const fileType = documentData.fileType;
-      const fileSize = documentFile.size;
+      const fileType = data.fileType;
+      const fileSize = file.size;
       const response = await fetch(`${apiBaseUrl}/documents`, {
         method: 'POST',
         headers: getAuthHeaders(adminToken),
         body: JSON.stringify({
-          title: documentData.title,
-          description: documentData.description || undefined,
+          title: data.title,
+          description: data.description || undefined,
           fileUrl,
           fileType,
           fileSize,
-          category: documentData.category,
-          tags: documentData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+          category: data.category,
+          tags: data.tags.split(',').map(tag => tag.trim()).filter(Boolean),
         }),
       });
       if (!response.ok) {
         throw new Error('Unable to create document');
       }
       const createdDoc = await response.json();
-      setDocuments([{
+      setDocuments((previous) => [{
         id: createdDoc.id,
         title: createdDoc.title,
         type: createdDoc.fileType.toLowerCase(),
@@ -1079,12 +1211,13 @@ export default function AdminDashboard() {
         fileType: createdDoc.fileType,
         fileSize: createdDoc.fileSize,
         tags: createdDoc.tags || [],
-      }, ...documents]);
-      setDocumentData({ title: '', description: '', category: 'General', fileType: 'OTHER', tags: '' });
-      setDocumentFile(null);
-      setShowDocumentForm(false);
+      }, ...previous]);
+      showToastMessage('Document uploaded successfully.', 'success');
     } catch (error) {
       console.error('Document upload failed:', error);
+      setDocumentData(data);
+      setDocumentFile(file);
+      setShowDocumentForm(true);
       showToastMessage('The document could not be uploaded. Please try again.', 'error');
     } finally {
       setIsCreatingDocument(false);
@@ -1302,7 +1435,7 @@ export default function AdminDashboard() {
             <div style={{ marginBottom: '20px' }}>
               <div style={{ fontSize: 12, color: 'var(--gray)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Contributions</div>
               <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>
-                {selectedPaymentUser.totalAmount.toLocaleString()} XAF
+                {selectedPaymentUser.totalAmount.toLocaleString()} FCFA
               </div>
             </div>
 
@@ -1334,7 +1467,7 @@ export default function AdminDashboard() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: 700, color: 'var(--navy)', fontSize: 14 }}>
-                          {(payment.amount || 0).toLocaleString()} XAF
+                          {(payment.amount || 0).toLocaleString()} FCFA
                         </div>
                         <div style={{ 
                           fontSize: 11, 
@@ -1435,61 +1568,61 @@ export default function AdminDashboard() {
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
           <button
-            onClick={() => { setActiveSection('overview'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('overview'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'overview' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'overview' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <Shield size={18} /> Overview
           </button>
           <button
-            onClick={() => { setActiveSection('events'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('events'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'events' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'events' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <Calendar size={18} /> Events
           </button>
           <button
-            onClick={() => { setActiveSection('announcements'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('announcements'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'announcements' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'announcements' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <Megaphone size={18} /> Announcements
           </button>
           <button
-            onClick={() => { setActiveSection('documents'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('documents'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'documents' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'documents' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <FileText size={18} /> Documents
           </button>
           <button
-            onClick={() => { setActiveSection('branches'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('branches'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'branches' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'branches' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <Users size={18} /> Branches
           </button>
           <button
-            onClick={() => { setActiveSection('batches'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('batches'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'batches' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'batches' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <GraduationCap size={18} /> Batches
           </button>
           <button
-            onClick={() => { setActiveSection('photos'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('photos'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'photos' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'photos' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <ImageIcon size={18} /> Photos
           </button>
           <button
-            onClick={() => { setActiveSection('registrations'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('registrations'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'registrations' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'registrations' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <UserPlus size={18} /> Registrations
           </button>
           <button
-            onClick={() => { setActiveSection('contributions'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('contributions'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'contributions' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'contributions' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <DollarSign size={18} /> Contributions
           </button>
      <button
-            onClick={() => { setActiveSection('statistics'); setSidebarOpen(false); }}
+            onClick={() => { changeActiveSection('statistics'); setSidebarOpen(false); }}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: activeSection === 'statistics' ? 'rgba(200,150,12,0.2)' : 'transparent', color: activeSection === 'statistics' ? 'var(--gold2)' : 'rgba(255,255,255,0.6)', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}
           >
             <BarChart3 size={18} /> Statistics
@@ -1573,52 +1706,43 @@ export default function AdminDashboard() {
                 />
               </div>
               <div className="admin-filter-group">
-                <select
+                <HeroSelect
                   value={statisticsFilters.branchId}
-                  onChange={(e) => setStatisticsFilters((prev) => ({ ...prev, branchId: e.target.value }))}
+                  onChange={(value) => setStatisticsFilters((prev) => ({ ...prev, branchId: value }))}
                   className="admin-filter-select"
-                >
-                  <option value="all">All branches</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.name}</option>
-                  ))}
-                </select>
+                  placeholder="All branches"
+                  options={[{ value: 'all', label: 'All branches' }, ...branches.map((branch) => ({ value: branch.id, label: branch.name }))]}
+                />
               </div>
               <div className="admin-filter-group">
-                <select
+                <HeroSelect
                   value={statisticsFilters.batchId}
-                  onChange={(e) => setStatisticsFilters((prev) => ({ ...prev, batchId: e.target.value }))}
+                  onChange={(value) => setStatisticsFilters((prev) => ({ ...prev, batchId: value }))}
                   className="admin-filter-select"
-                >
-                  <option value="all">All batches</option>
-                  {batches.map((batch) => (
-                    <option key={batch.id} value={batch.id}>{batch.name || `Batch ${batch.year}`}</option>
-                  ))}
-                </select>
+                  placeholder="All batches"
+                  options={[{ value: 'all', label: 'All batches' }, ...batches.map((batch) => ({ value: batch.id, label: batch.name || `Batch ${batch.year}` }))]}
+                />
               </div>
               <div className="admin-filter-group">
-                <select
+                <HeroSelect
                   value={statisticsFilters.role}
-                  onChange={(e) => setStatisticsFilters((prev) => ({ ...prev, role: e.target.value }))}
+                  onChange={(value) => setStatisticsFilters((prev) => ({ ...prev, role: value }))}
                   className="admin-filter-select"
-                >
-                  <option value="all">All roles</option>
-                  <option value="member">Alumni</option>
-                  <option value="branch_leader">Branch leaders</option>
-                  <option value="admin">Admins</option>
-                </select>
+                  placeholder="All roles"
+                  options={[{ value: 'all', label: 'All roles' }, { value: 'member', label: 'Alumni' }, { value: 'branch_leader', label: 'Branch leaders' }, { value: 'admin', label: 'Admins' }]}
+                />
               </div>
               <div className="admin-filter-group admin-filter-date">
-                <input 
-                  type="date" 
-                  value={dateRange.start} 
-                  onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))} 
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
                   className="admin-filter-input"
                 />
-                <input 
-                  type="date" 
-                  value={dateRange.end} 
-                  onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))} 
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
                   className="admin-filter-input"
                 />
               </div>
@@ -1928,20 +2052,7 @@ export default function AdminDashboard() {
 
         {activeSection === 'overview' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }} className="admin-grid-2">
-            <div className="card">
-              <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--navy)', marginBottom: '16px' }}>Recent Activity</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {events.slice(0, 3).map(event => (
-                  <div key={event.id} style={{ padding: '12px', background: 'var(--off)', borderRadius: '8px', border: '1px solid var(--lgray)' }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--navy)', marginBottom: '4px' }}>{event.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--gray)' }}>{event.startDate} · {event.location}</div>
-                  </div>
-                ))}
-                {events.length === 0 && (
-                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--gray)', fontSize: 14 }}>No recent events</div>
-                )}
-              </div>
-            </div>
+            <div style={{ minWidth: 0 }}><PhotoCarousel slides={eventCarouselSlides} /></div>
             <div className="card">
               <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--navy)', marginBottom: '16px' }}>Recent Announcements</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1959,19 +2070,19 @@ export default function AdminDashboard() {
             <div className="card" style={{ gridColumn: '1 / -1' }}>
               <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--navy)', marginBottom: '16px' }}>Quick Actions</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }} className="admin-grid-4">
-                <button onClick={() => setActiveSection('events')} style={{ padding: '16px', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <button onClick={() => changeActiveSection('events')} style={{ padding: '16px', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                   <Calendar size={24} />
                   <span>Create Event</span>
                 </button>
-                <button onClick={() => setActiveSection('announcements')} style={{ padding: '16px', background: 'var(--gold)', color: 'var(--navy)', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <button onClick={() => changeActiveSection('announcements')} style={{ padding: '16px', background: 'var(--gold)', color: 'var(--navy)', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                   <Megaphone size={24} />
                   <span>Post Update</span>
                 </button>
-                <button onClick={() => setActiveSection('documents')} style={{ padding: '16px', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <button onClick={() => changeActiveSection('documents')} style={{ padding: '16px', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                   <FileIcon size={24} />
                   <span>Upload Doc</span>
                 </button>
-                <button onClick={() => setActiveSection('branches')} style={{ padding: '16px', background: 'var(--gold)', color: 'var(--navy)', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <button onClick={() => changeActiveSection('branches')} style={{ padding: '16px', background: 'var(--gold)', color: 'var(--navy)', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                   <Building2 size={24} />
                   <span>Add Branch</span>
                 </button>
@@ -2007,7 +2118,7 @@ export default function AdminDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', width: '100%' }} className="admin-grid-2">
                   <div className="fg"><label>Event Title *</label><input type="text" value={eventData.title} onChange={(e) => setEventData({ ...eventData, title: e.target.value })} placeholder="e.g. Annual Reunion" /></div>
                   <div className="fg"><label>Location *</label><input type="text" value={eventData.location} onChange={(e) => setEventData({ ...eventData, location: e.target.value })} placeholder="e.g. JOPACC Campus" /></div>
-                  <div className="fg"><label>Batch Numbers *</label>
+                  <div className="fg"><label>Batch Numbers (optional)</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
@@ -2021,23 +2132,22 @@ export default function AdminDashboard() {
                         All Batches
                       </button>
                     </div>
-                    <select
+                    <HeroSelect
                       value=""
-                      onChange={(e) => {
-                        const selectedBatchId = e.target.value;
+                      onChange={(selectedBatchId) => {
                         if (!selectedBatchId || eventData.batchIds.includes(selectedBatchId)) return;
                         setEventData({ ...eventData, batchIds: [...eventData.batchIds, selectedBatchId] });
                       }}
                       style={{ width: '100%', padding: '12px 14px', border: '2px solid var(--lgray)', borderRadius: '8px', fontSize: '14px' }}
-                    >
-                      <option value="">— Select a batch —</option>
-                      {batches.map((batch) => {
+                      placeholder="Select a batch"
+                      options={[
+                        { value: '', label: '— Select a batch —' },
+                        ...batches.map((batch) => {
                         const label = batch?.name || `Batch ${batch?.year ?? ''}`;
-                        return (
-                          <option key={batch.id} value={batch.id}>{label}</option>
-                        );
-                      })}
-                    </select>
+                        return { value: batch.id, label };
+                        }),
+                      ]}
+                    />
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {eventData.batchIds.map((batchId) => {
                         const batch = batches.find((item) => item.id === batchId);
@@ -2085,7 +2195,7 @@ export default function AdminDashboard() {
                     <Plus size={14} /> {eventData.registrationForm.length > 0 ? 'Edit Form' : 'Add Form'}
                   </button>
                 </div>
-                <div className="fg"><label>Status</label><div className="sel-wrap"><select value={eventData.status} onChange={(e) => setEventData({ ...eventData, status: e.target.value as 'upcoming' | 'past' })}><option value="upcoming">Upcoming</option><option value="past">Past</option></select></div></div>
+                  <div className="fg"><label>Status</label><HeroSelect value={eventData.status} onChange={(value) => setEventData({ ...eventData, status: value as 'upcoming' | 'past' })} options={[{ value: 'upcoming', label: 'Upcoming' }, { value: 'past', label: 'Past' }]} ariaLabel="Event status" /></div>
                 <button className="btn btn-navy" onClick={handleCreateEvent} disabled={isSavingEvent} style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>{isSavingEvent ? <><LoaderCircle size={16} className="loading-spinner" /> {editingEventId ? 'Updating Event...' : 'Creating Event...'}</> : <>{editingEventId ? 'Update Event →' : 'Create Event →'}</>}</button>
               </div>
             )}
@@ -2134,25 +2244,17 @@ export default function AdminDashboard() {
                           </button>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
-                          <select
+                          <HeroSelect
                             value={field.type}
-                            onChange={(e) => {
+                            onChange={(value) => {
                               const updated = [...eventData.registrationForm];
-                              updated[index].type = e.target.value;
+                              updated[index].type = value;
                               setEventData({ ...eventData, registrationForm: updated });
                             }}
                             style={{ padding: '8px 12px', border: '1px solid var(--lgray)', borderRadius: '6px', fontSize: '13px' }}
-                          >
-                            <option value="text">Text</option>
-                            <option value="number">Number</option>
-                            <option value="email">Email</option>
-                            <option value="textarea">Text Area</option>
-                            <option value="radio">Radio</option>
-                            <option value="checkbox">Checkbox</option>
-                            <option value="select">Select</option>
-                            <option value="file">File Upload</option>
-                            <option value="date">Date</option>
-                          </select>
+                            ariaLabel="Registration field type"
+                            options={[{ value: 'text', label: 'Text' }, { value: 'number', label: 'Number' }, { value: 'email', label: 'Email' }, { value: 'textarea', label: 'Text Area' }, { value: 'radio', label: 'Radio' }, { value: 'checkbox', label: 'Checkbox' }, { value: 'select', label: 'Select' }, { value: 'file', label: 'File Upload' }, { value: 'date', label: 'Date' }]}
+                          />
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
                             <input
                               type="checkbox"
@@ -2259,7 +2361,7 @@ export default function AdminDashboard() {
                 <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--navy)' }}>Manage Announcements</div>
                 <div style={{ fontSize: 12, color: 'var(--gray)' }}>Create and edit announcements</div>
               </div>
-              <button className="btn btn-gold btn-sm" onClick={() => { setShowAnnouncementForm(!showAnnouncementForm); setEditingAnnouncementId(null); }}>
+              <button className="btn btn-gold btn-sm" disabled={isSavingAnnouncement} onClick={() => { setShowAnnouncementForm(!showAnnouncementForm); setEditingAnnouncementId(null); }}>
                 {showAnnouncementForm ? <X size={14} /> : <Plus size={14} />} {showAnnouncementForm ? 'Cancel' : 'New Post'}
               </button>
             </div>
@@ -2268,12 +2370,20 @@ export default function AdminDashboard() {
                 <div className="divider"></div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }} className="admin-grid-2">
                   <div className="fg"><label>Title *</label><input type="text" value={announcementData.title} onChange={(e) => setAnnouncementData({ ...announcementData, title: e.target.value })} placeholder="e.g. Annual Meeting Schedule" /></div>
-                  <div className="fg"><label>Type</label><div className="sel-wrap"><select value={announcementData.type} onChange={(e) => setAnnouncementData({ ...announcementData, type: e.target.value as 'NEWS' | 'UPDATE' | 'EVENT' | 'OPPORTUNITY' | 'WARNING' })}><option value="NEWS">News</option><option value="UPDATE">Update</option><option value="EVENT">Event</option><option value="OPPORTUNITY">Opportunity</option><option value="WARNING">Warning</option></select></div></div>
+                  <div className="fg"><label>Type</label><HeroSelect value={announcementData.type} onChange={(value) => setAnnouncementData({ ...announcementData, type: value as 'NEWS' | 'UPDATE' | 'EVENT' | 'OPPORTUNITY' | 'WARNING' })} options={[{ value: 'NEWS', label: 'News' }, { value: 'UPDATE', label: 'Update' }, { value: 'EVENT', label: 'Event' }, { value: 'OPPORTUNITY', label: 'Opportunity' }, { value: 'WARNING', label: 'Warning' }]} ariaLabel="Announcement type" /></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }} className="admin-grid-2">
-                  <div className="fg"><label>Image URL (optional)</label><input type="url" value={announcementData.imageUrl} onChange={(e) => setAnnouncementData({ ...announcementData, imageUrl: e.target.value })} placeholder="https://example.com/image.jpg" /></div>
+                  <div className="fg">
+                    <label>Announcement image (optional)</label>
+                    <input type="file" accept="image/*" onChange={(e) => setAnnouncementImageFile(e.target.files?.[0] || null)} aria-label="Upload announcement image" />
+                    {announcementImageFile && <button type="button" className="btn btn-sm" onClick={() => setAnnouncementImageFile(null)}>Remove selected image</button>}
+                    <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>Choose an image file to attach it to the announcement.</div>
+                  </div>
                   <div className="fg" style={{ display: 'flex', alignItems: 'flex-end' }}><label style={{ width: '100%', marginBottom: 8 }}>Pin announcement</label><div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><input type="checkbox" checked={announcementData.isPinned} onChange={(e) => setAnnouncementData({ ...announcementData, isPinned: e.target.checked })} /> <span style={{ color: 'var(--gray)', fontSize: 13 }}>Pinned</span></div></div>
                 </div>
+                {announcementData.imageUrl && (
+                  <img src={announcementData.imageUrl} alt="Announcement image preview" style={{ display: 'block', width: '100%', maxHeight: '220px', objectFit: 'cover', borderRadius: '8px', marginBottom: '16px' }} />
+                )}
                 <div className="fg"><label>Content *</label><textarea value={announcementData.content} onChange={(e) => setAnnouncementData({ ...announcementData, content: e.target.value })} placeholder="Announcement details..." style={{ width: '100%', padding: '15px 16px', border: '2px solid var(--lgray)', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit', minHeight: '100px', resize: 'vertical' }} /></div>
                 <button className="btn btn-navy" onClick={handleSaveAnnouncement} disabled={isSavingAnnouncement} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>{isSavingAnnouncement ? <><LoaderCircle size={16} className="loading-spinner" /> {editingAnnouncementId ? 'Updating Announcement...' : 'Posting Announcement...'}</> : <>{editingAnnouncementId ? 'Update Announcement →' : 'Post Announcement →'}</>}</button>
               </div>
@@ -2298,6 +2408,7 @@ export default function AdminDashboard() {
                       <button className="del-btn" onClick={() => openDeleteModal('announcement', announcement.id, 'Delete announcement?', 'This action will remove the announcement from the dashboard.') }><Trash2 size={14} /></button>
                     </div>
                     <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--navy)', marginBottom: 5 }}>{announcement.title}</div>
+                    {(announcement.imageUrl || announcement.image) && <img src={announcement.imageUrl || announcement.image} alt="" style={{ display: 'block', width: '100%', maxHeight: '180px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />}
                     <div style={{ fontSize: 14, color: 'var(--dark)', lineHeight: 1.5, marginBottom: 8 }}>{announcement.content}</div>
                     <div style={{ fontSize: 12, color: 'var(--gray)' }}>{announcement.createdAt} · {announcement.type} · by {announcement.createdBy}</div>
                   </div>
@@ -2326,11 +2437,17 @@ export default function AdminDashboard() {
                   <div className="fg"><label>Category *</label><input type="text" value={documentData.category} onChange={(e) => setDocumentData({ ...documentData, category: e.target.value })} placeholder="e.g. Reports" /></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }} className="admin-grid-2">
-                  <div className="fg"><label>File Type</label><div className="sel-wrap"><select value={documentData.fileType} onChange={(e) => setDocumentData({ ...documentData, fileType: e.target.value as 'PDF' | 'IMAGE' | 'PRESENTATION' | 'SPREADSHEET' | 'VIDEO' | 'OTHER' })}><option value="PDF">PDF</option><option value="IMAGE">Image</option><option value="PRESENTATION">Presentation</option><option value="SPREADSHEET">Spreadsheet</option><option value="VIDEO">Video</option><option value="OTHER">Other</option></select></div></div>
+                  <div className="fg"><label>File Type</label><HeroSelect value={documentData.fileType} onChange={(value) => setDocumentData({ ...documentData, fileType: value as 'PDF' | 'IMAGE' | 'PRESENTATION' | 'SPREADSHEET' | 'VIDEO' | 'OTHER' })} options={[{ value: 'PDF', label: 'PDF' }, { value: 'IMAGE', label: 'Image' }, { value: 'PRESENTATION', label: 'Presentation' }, { value: 'SPREADSHEET', label: 'Spreadsheet' }, { value: 'VIDEO', label: 'Video' }, { value: 'OTHER', label: 'Other' }]} ariaLabel="File type" /></div>
                   <div className="fg"><label>Tags</label><input type="text" value={documentData.tags} onChange={(e) => setDocumentData({ ...documentData, tags: e.target.value })} placeholder="e.g. alumni,meeting,minutes" /></div>
                 </div>
                 <div className="fg"><label>Description (optional)</label><textarea value={documentData.description} onChange={(e) => setDocumentData({ ...documentData, description: e.target.value })} placeholder="Short summary of the document" style={{ width: '100%', padding: '15px 16px', border: '2px solid var(--lgray)', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit', minHeight: '90px', resize: 'vertical' }} /></div>
-                <div className="fg"><label>File *</label><input type="file" onChange={(e) => setDocumentFile(e.target.files?.[0] || null)} accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xlsx,.csv" style={{ width: '100%', padding: '15px 16px', border: '2px solid var(--lgray)', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit' }} /><div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>Accepted: PDF, DOC, DOCX, TXT, PPT, PPTX, XLSX, CSV</div></div>
+                <div className="fg"><label>File *</label><input type="file" onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setDocumentFile(file);
+                  if (file?.type.startsWith('image/')) setDocumentData((current) => ({ ...current, fileType: 'IMAGE' }));
+                  else if (file?.type.startsWith('video/')) setDocumentData((current) => ({ ...current, fileType: 'VIDEO' }));
+                  else if (file?.type === 'application/pdf') setDocumentData((current) => ({ ...current, fileType: 'PDF' }));
+                }} accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xlsx,.csv,image/*,video/*" style={{ width: '100%', padding: '15px 16px', border: '2px solid var(--lgray)', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit' }} /><div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>Accepted: documents, images, and videos. Image, video, and PDF types are detected automatically.</div></div>
                 <button className="btn btn-navy" onClick={handleCreateDocument} disabled={isCreatingDocument} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>{isCreatingDocument ? <><LoaderCircle size={16} className="loading-spinner" /> Uploading Document...</> : <>Upload Document →</>}</button>
               </div>
             )}
@@ -2484,12 +2601,7 @@ export default function AdminDashboard() {
                 <div className="fg">
                   <label>Select Event *</label>
                   <div className="sel-wrap">
-                    <select value={selectedEventId} onChange={(e) => setSelectedEventId(e.target.value)}>
-                      <option value="">— Select an event —</option>
-                      {events.map(event => (
-                        <option key={event.id} value={event.id}>{event.title}</option>
-                      ))}
-                    </select>
+                    <HeroSelect value={selectedEventId} onChange={setSelectedEventId} placeholder="Select an event" ariaLabel="Event" options={[{ value: '', label: '— Select an event —' }, ...events.map((event) => ({ value: event.id, label: event.title }))]} />
                   </div>
                 </div>
                 <div className="fg">
@@ -2664,11 +2776,12 @@ export default function AdminDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', width: '100%' }} className="admin-grid-2">
                   <div className="fg"><label>Title *</label><input type="text" value={contributionData.title} onChange={(e) => setContributionData({ ...contributionData, title: e.target.value })} placeholder="e.g., Annual Membership Fee 2026" /></div>
                   <div className="fg"><label>Type *</label>
-                    <select value={contributionData.type} onChange={(e) => setContributionData({ ...contributionData, type: e.target.value as any })}>
+                    <select value={contributionData.type} onChange={(e) => setContributionData({ ...contributionData, type: e.target.value as any, installments: e.target.value === 'DONATION' ? [] : contributionData.installments })}>
                       <option value="EVENT_REGISTRATION">Event Registration Fee</option>
                       <option value="ANNUAL_FEE">Annual Fee</option>
                       <option value="GENERAL">General</option>
-                      <option value="PROJECTS">Projects</option>
+                      <option value="DONATION">Voluntary Donation</option>
+                      <option value="PROJECT">Projects</option>
                       <option value="OTHER">Other</option>
                     </select>
                   </div>
@@ -2689,21 +2802,27 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="fg"><label>Description</label><textarea value={contributionData.description} onChange={(e) => setContributionData({ ...contributionData, description: e.target.value })} placeholder="Describe this contribution..." /></div>
-                <div className="fg"><label>Payment Installments</label>
+                {contributionData.type === 'DONATION' ? (
+                  <div className="fg"><label>Amount</label><div style={{ color: 'var(--gray)', fontSize: 13 }}>Members choose how much they wish to give when making a donation.</div></div>
+                ) : <div className="fg"><label>Payment Installments</label>
                   <div style={{ display: 'grid', gap: '10px' }}>
                     {contributionData.installments.map((installment, index) => (
                       <div key={installment.id} className="installment-row" style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '8px', alignItems: 'center', padding: '12px', background: 'var(--off)', borderRadius: '8px', border: '1px solid var(--lgray)' }}>
                         <input type="text" value={installment.label} onChange={(e) => { const updated = [...contributionData.installments]; updated[index].label = e.target.value; setContributionData({ ...contributionData, installments: updated }); }} placeholder="Label (e.g., First Installment)" style={{ width: '100%', padding: '12px 14px', border: '2px solid var(--lgray)', borderRadius: '8px', fontSize: '14px' }} />
-                        <input type="number" value={installment.amount} onChange={(e) => { const updated = [...contributionData.installments]; updated[index].amount = parseFloat(e.target.value) || 0; setContributionData({ ...contributionData, installments: updated }); }} placeholder="Amount" style={{ width: '120px', padding: '12px 14px', border: '2px solid var(--lgray)', borderRadius: '8px', fontSize: '14px' }} />
+                        <input type="number" min="1" step="1" required value={installment.amount || ''} onChange={(e) => { const updated = [...contributionData.installments]; updated[index].amount = parseFloat(e.target.value) || 0; setContributionData({ ...contributionData, installments: updated }); }} placeholder="Amount (FCFA)" aria-label={`Amount in FCFA for ${installment.label}`} style={{ width: '140px', padding: '12px 14px', border: '2px solid var(--lgray)', borderRadius: '8px', fontSize: '14px' }} />
                         <input type="date" value={installment.dueDate} onChange={(e) => { const updated = [...contributionData.installments]; updated[index].dueDate = e.target.value; setContributionData({ ...contributionData, installments: updated }); }} style={{ width: '180px', padding: '12px 14px', border: '2px solid var(--lgray)', borderRadius: '8px', fontSize: '14px' }} />
                         <button onClick={() => { const updated = contributionData.installments.filter((_, i) => i !== index); setContributionData({ ...contributionData, installments: updated }); }} style={{ padding: '10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Trash2 size={16} /></button>
                       </div>
                     ))}
                     <button onClick={() => setContributionData({ ...contributionData, installments: [...contributionData.installments, { id: Date.now().toString(), label: `Installment ${contributionData.installments.length + 1}`, amount: 0, dueDate: '' }] })} style={{ padding: '12px 14px', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', width: 'fit-content' }}><Plus size={14} /> Add Installment</button>
                   </div>
-                </div>
+                </div>}
                 <div className="admin-grid-2" style={{ gap: '12px', marginTop: '16px' }}>
                   <button className="btn btn-navy" onClick={async () => {
+                    if (contributionData.installments.some((installment) => !Number.isFinite(installment.amount) || installment.amount <= 0)) {
+                      showToastMessage('Enter a positive FCFA amount for every installment.', 'warning');
+                      return;
+                    }
                     try {
                       setIsSavingContribution(true);
                       const payload = {
@@ -2772,8 +2891,8 @@ export default function AdminDashboard() {
                             <div style={{ fontSize: '11px', color: 'var(--gray)' }}>{contribution.description || 'No description'}</div>
                           </td>
                           <td style={{ padding: '12px 8px', fontSize: '12' }}>{contribution.type?.replace(/_/g, ' ') || 'General'}</td>
-                          <td style={{ padding: '12px 8px', fontSize: '12' }}>{contribution.installments?.length || 0} installment(s)</td>
-                          <td style={{ padding: '12px 8px', fontSize: '12', fontWeight: 600 }}>${totalAmount.toFixed(2)}</td>
+                          <td style={{ padding: '12px 8px', fontSize: '12' }}>{contribution.type === 'DONATION' ? 'Voluntary donation' : `${contribution.installments?.length || 0} installment(s)`}</td>
+                          <td style={{ padding: '12px 8px', fontSize: '12', fontWeight: 600 }}>{contribution.type === 'DONATION' ? 'Member-set amount' : `${totalAmount.toLocaleString()} FCFA`}</td>
                           <td style={{ padding: '12px 8px' }}>
                             <span className={`status-badge ${String(contribution.status || 'ACTIVE').toLowerCase()}`} style={{ textTransform: 'capitalize', fontSize: '10px', padding: '2px 6px' }}>{String(contribution.status || 'ACTIVE').toLowerCase()}</span>
                           </td>
@@ -2829,7 +2948,7 @@ export default function AdminDashboard() {
                               <div style={{ fontSize: 11, color: 'var(--gray)' }}>{payment.payerEmail || ''}</div>
                             </td>
                             <td style={{ padding: '12px', fontSize: 13, fontWeight: 600 }}>
-                              ${Number(payment.amount || 0).toFixed(2)}
+                              {Number(payment.amount || 0).toLocaleString()} FCFA
                             </td>
                             <td style={{ padding: '12px', fontSize: 12 }}>
                               {payment.installmentLabel || 'N/A'}

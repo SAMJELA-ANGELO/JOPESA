@@ -1,19 +1,35 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Building2, MapPin, Users, Globe } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, MapPin, Users, Globe, Briefcase } from 'lucide-react';
 import { Branch } from '@/types';
 import { apiFetch, unwrapList } from '@/lib/api';
 
+interface ChapterMember {
+  id: string;
+  branchId: string;
+  currentRole?: string | null;
+  user?: {
+    fullName?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  };
+}
+
 export default function AlumniChaptersPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [members, setMembers] = useState<ChapterMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const load = async () => {
       try {
-        const payload = await apiFetch(`/branch?skip=0&take=100`);
+        const [payload, membersPayload] = await Promise.all([
+          apiFetch(`/branch?skip=0&take=100`),
+          apiFetch(`/alumni/members?skip=0&take=500`),
+        ]);
         setBranches(
           unwrapList<Branch>(payload).map((branch) => ({
             ...branch,
@@ -22,6 +38,7 @@ export default function AlumniChaptersPage() {
             createdAt: branch.createdAt || '',
           })),
         );
+        setMembers(unwrapList<ChapterMember>(membersPayload));
       } catch (err) {
         console.error(err);
         setError('Unable to load chapters.');
@@ -70,8 +87,9 @@ export default function AlumniChaptersPage() {
 
       {!loading && !error && branches.length > 0 && (
         <div className="chapters-grid">
-          {branches.map((branch) => (
-            <div key={branch.id} className="chapter-card">
+          {branches.map((branch) => {
+            const chapterMembers = members.filter((member) => member.branchId === branch.id);
+            return <div key={branch.id} className="chapter-card">
               <div className="chapter-card-header">
                 <div className="chapter-icon">
                   <Globe size={20} />
@@ -86,7 +104,7 @@ export default function AlumniChaptersPage() {
               <div className="chapter-stats">
                 <div className="chapter-stat">
                   <Users size={16} />
-                  <span>{branch.memberCount || 0} members</span>
+                  <span>{chapterMembers.length} members</span>
                 </div>
                 {branch.region && (
                   <div className="chapter-stat">
@@ -95,8 +113,20 @@ export default function AlumniChaptersPage() {
                   </div>
                 )}
               </div>
+              <div className="chapter-members">
+                <h4>Members</h4>
+                {chapterMembers.length ? chapterMembers.map((member) => {
+                  const name = member.user?.fullName || `${member.user?.firstName || ''} ${member.user?.lastName || ''}`.trim() || 'Alumni member';
+                  return (
+                    <Link key={member.id} href={`/alumni/directory/${member.id}`} className="chapter-member-link">
+                      <span>{name}</span>
+                      {member.currentRole && <span><Briefcase size={13} /> {member.currentRole}</span>}
+                    </Link>
+                  );
+                }) : <p className="chapter-members-empty">No alumni are listed under this chapter yet.</p>}
+              </div>
             </div>
-          ))}
+          })}
         </div>
       )}
     </div>

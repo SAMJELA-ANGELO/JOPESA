@@ -1,30 +1,33 @@
-export async function downloadFile(url: string, filename?: string) {
+import { resolveMediaUrl } from './api';
+
+export async function downloadFile(url: string, filename?: string, fallbackType?: string) {
   if (!url) return;
 
-  const fallbackName = filename || url.split('/').pop()?.split('?')[0] || 'download';
+  const downloadUrl = new URL(resolveMediaUrl(url));
+  const pathName = decodeURIComponent(downloadUrl.pathname.split('/').pop() || 'download');
+  const urlExtension = pathName.match(/\.([a-z0-9]{2,8})$/i)?.[1];
+  const typeExtensions: Record<string, string> = {
+    pdf: 'pdf',
+    image: 'jpg',
+    presentation: 'pptx',
+    spreadsheet: 'xlsx',
+    video: 'mp4',
+  };
+  const extension = urlExtension || typeExtensions[fallbackType?.toLowerCase() || ''];
+  const requestedName = filename || pathName || 'download';
+  const fallbackName = extension && !/\.[a-z0-9]{2,8}$/i.test(requestedName)
+    ? `${requestedName}.${extension}`
+    : requestedName;
 
-  try {
-    const response = await fetch(url, { mode: 'cors' });
-    if (!response.ok) {
-      throw new Error('Download failed');
-    }
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = objectUrl;
-    link.download = fallbackName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(objectUrl);
-  } catch {
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.download = fallbackName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+  if (downloadUrl.hostname === 'res.cloudinary.com') {
+    downloadUrl.pathname = downloadUrl.pathname.replace('/upload/', `/upload/fl_attachment:${encodeURIComponent(fallbackName)}/`);
   }
+
+  const link = document.createElement('a');
+  link.href = downloadUrl.toString();
+  link.download = fallbackName;
+  link.rel = 'noopener noreferrer';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }

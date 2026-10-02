@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, formatDate, getApiBase, getAlumniToken, unwrapList } from '@/lib/api';
+import { apiFetch, formatDate, getApiBase, getAlumniToken, isValidCameroonPhone, normalizeCameroonPhone, unwrapList } from '@/lib/api';
 import { Contribution } from '@/types';
 import Toast from '@/components/Toast';
+import HeroSelect from '@/components/HeroSelect';
 
 export default function AlumniContributionsPage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function AlumniContributionsPage() {
   useEffect(() => {
     const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('jopesa_user') || '{}') : {};
     if (storedUser?.phone) {
-      setPhone(storedUser.phone);
+      setPhone(normalizeCameroonPhone(storedUser.phone));
     }
 
     const loadContributions = async () => {
@@ -61,8 +62,8 @@ export default function AlumniContributionsPage() {
         const preSelected = contributions.find(c => c.id === preSelectedId);
         if (preSelected) {
           setSelectedContribution(preSelected);
-          setSelectedInstallmentId(preSelected.installments?.[0]?.id || '');
-          setAmount(preSelected.installments?.[0]?.amount?.toString() || '');
+          setSelectedInstallmentId(preSelected.type === 'DONATION' ? '' : preSelected.installments?.[0]?.id || '');
+          setAmount(preSelected.type === 'DONATION' ? '' : preSelected.installments?.[0]?.amount?.toString() || '');
           setMessage(`Payment for ${preSelected.title}`);
           localStorage.removeItem('selectedContributionId');
         }
@@ -72,8 +73,8 @@ export default function AlumniContributionsPage() {
 
   const handleSelectContribution = (contribution: Contribution) => {
     setSelectedContribution(contribution);
-    setSelectedInstallmentId(contribution.installments?.[0]?.id || '');
-    setAmount(contribution.installments?.[0]?.amount?.toString() || '');
+    setSelectedInstallmentId(contribution.type === 'DONATION' ? '' : contribution.installments?.[0]?.id || '');
+    setAmount(contribution.type === 'DONATION' ? '' : contribution.installments?.[0]?.amount?.toString() || '');
     setMessage(`Payment for ${contribution.title}`);
     // Scroll to payment form on mobile
     if (window.innerWidth < 768 && paymentPanelRef.current) {
@@ -83,16 +84,27 @@ export default function AlumniContributionsPage() {
 
   const handleInitiate = async () => {
     if (!selectedContribution) return;
-    if (!selectedInstallmentId) {
+    const normalizedPhone = normalizeCameroonPhone(phone);
+    if (!isValidCameroonPhone(normalizedPhone)) {
+      showToast('Enter a 9-digit phone number starting with 6, for example 681778976.', 'warning');
+      return;
+    }
+    const isDonation = selectedContribution.type === 'DONATION';
+    if (!isDonation && !selectedInstallmentId) {
       showToast('Please select an installment.', 'warning');
+      return;
+    }
+    if (isDonation && (!Number.isInteger(Number(amount)) || Number(amount) <= 0)) {
+      showToast('Enter a positive whole-number donation amount in XAF.', 'warning');
       return;
     }
     setSubmitting(true);
 
     try {
       const payload = {
-        installmentId: selectedInstallmentId,
-        phone,
+        ...(selectedInstallmentId ? { installmentId: selectedInstallmentId } : {}),
+        ...(isDonation ? { amount: Number(amount) } : {}),
+        phone: normalizedPhone,
         redirectUrl: redirectUrl || `${window.location.origin}/alumni/profile`,
         message,
       };
@@ -176,10 +188,10 @@ export default function AlumniContributionsPage() {
                     <div style={{ fontSize: 14, color: 'var(--gray)', marginBottom: 12 }}>{contribution.description || 'No description provided.'}</div>
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)' }}>
-                        {contribution.installments?.length || 0} installment(s)
+                        {contribution.type === 'DONATION' ? 'Voluntary amount' : `${contribution.installments?.length || 0} installment(s)`}
                       </div>
                       <div style={{ fontSize: 13, color: 'var(--gray)' }}>
-                        Total: {contribution.installments?.reduce((sum, inst) => sum + (inst.amount || 0), 0).toLocaleString()} XAF
+                        {contribution.type === 'DONATION' ? 'Give any amount' : `Total: ${contribution.installments?.reduce((sum, inst) => sum + (inst.amount || 0), 0).toLocaleString()} XAF`}
                       </div>
                     </div>
                   </div>
@@ -192,45 +204,55 @@ export default function AlumniContributionsPage() {
             {selectedContribution ? (
               <>
                 <h2 style={{ marginTop: 0, fontSize: 20, marginBottom: 16 }}>Pay: {selectedContribution.title}</h2>
-                <div style={{ marginBottom: 16 }}>
+                {selectedContribution.type !== 'DONATION' && <div style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>Installment</label>
-                  <select
+                  <HeroSelect
                     value={selectedInstallmentId}
-                    onChange={(e) => {
-                      setSelectedInstallmentId(e.target.value);
-                      const installment = selectedContribution.installments?.find((inst) => inst.id === e.target.value);
+                    onChange={(value) => {
+                      setSelectedInstallmentId(value);
+                      const installment = selectedContribution.installments?.find((inst) => inst.id === value);
                       if (installment) {
                         setAmount(installment.amount?.toString() || '');
                       }
                     }}
+                    ariaLabel="Installment"
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--lgray)', fontSize: 14 }}
-                  >
-                    {selectedContribution.installments?.map((installment) => (
-                      <option key={installment.id} value={installment.id}>
-                        {installment.label} — {installment.amount?.toLocaleString()} XAF{installment.dueDate ? ` (Due ${formatDate(installment.dueDate)})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    options={(selectedContribution.installments || []).map((installment) => ({
+                      value: installment.id,
+                      label: `${installment.label} — ${installment.amount?.toLocaleString()} XAF${installment.dueDate ? ` (Due ${formatDate(installment.dueDate)})` : ''}`,
+                    }))}
+                  />
+                </div>}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>Amount (XAF)</label>
+                  <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>{selectedContribution.type === 'DONATION' ? 'Donation amount (XAF)' : 'Amount (XAF)'}</label>
                   <input
                     type="number"
+                    min="1"
+                    step="1"
                     value={amount}
-                    readOnly
-                    aria-readonly="true"
-                    tabIndex={-1}
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--lgray)', fontSize: 14, background: '#f3f4f6', color: 'var(--dark)', cursor: 'not-allowed' }}
+                    onChange={(e) => selectedContribution.type === 'DONATION' && setAmount(e.target.value)}
+                    readOnly={selectedContribution.type !== 'DONATION'}
+                    aria-readonly={selectedContribution.type !== 'DONATION'}
+                    tabIndex={selectedContribution.type === 'DONATION' ? 0 : -1}
+                    placeholder={selectedContribution.type === 'DONATION' ? 'Enter any amount' : undefined}
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--lgray)', fontSize: 14, background: selectedContribution.type === 'DONATION' ? '#fff' : '#f3f4f6', color: 'var(--dark)', cursor: selectedContribution.type === 'DONATION' ? 'text' : 'not-allowed' }}
                   />
                 </div>
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>Phone number</label>
                   <input
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="e.g. +237 650 000 000"
+                    onChange={(e) => setPhone(normalizeCameroonPhone(e.target.value).slice(0, 9))}
+                    placeholder="681778976"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    maxLength={18}
+                    aria-describedby="payment-phone-format"
                     style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--lgray)', fontSize: 14 }}
                   />
+                  <div id="payment-phone-format" style={{ marginTop: 6, color: phone && !isValidCameroonPhone(phone) ? 'var(--err)' : 'var(--gray)', fontSize: 12 }}>
+                    Use exactly 9 digits, starting with 6.
+                  </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 700 }}>Message (optional)</label>

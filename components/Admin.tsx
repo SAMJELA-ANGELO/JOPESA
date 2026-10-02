@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from '@heroui/react';
+import HeroSelect from '@/components/HeroSelect';
 import { Shield, Users, Calendar, FileText, Settings, Plus, Trash2, MapPin, UserPlus, Clock } from 'lucide-react';
 import { User, Event, Announcement, Document, Branch } from '@/types';
 
@@ -56,9 +58,18 @@ export default function Admin({ users, events, announcements, documents, branche
     leaderId: ''
   });
 
+  const notify = (message: string, type: 'success' | 'warning' | 'error' = 'success') => {
+    const title = type === 'error' ? 'Error' : type === 'warning' ? 'Notice' : 'Success';
+    const options = { description: message, timeout: 3500 };
+
+    if (type === 'error') toast.danger(title, options);
+    else if (type === 'warning') toast.warning(title, options);
+    else toast.success(title, options);
+  };
+
   const handleCreateEvent = () => {
     if (!eventData.title || !eventData.startDate || !eventData.endDate || !eventData.location) {
-      alert('Please fill in all required fields');
+      notify('Please fill in all required fields', 'warning');
       return;
     }
     const newEvent: Event = {
@@ -73,7 +84,7 @@ export default function Admin({ users, events, announcements, documents, branche
 
   const handleCreateAnnouncement = () => {
     if (!announcementData.title || !announcementData.content) {
-      alert('Please fill in all required fields');
+      notify('Please fill in all required fields', 'warning');
       return;
     }
     const newAnnouncement: Announcement = {
@@ -89,7 +100,7 @@ export default function Admin({ users, events, announcements, documents, branche
 
   const handleCreateDocument = () => {
     if (!documentData.title || !documentData.fileUrl) {
-      alert('Please fill in all required fields');
+      notify('Please fill in all required fields', 'warning');
       return;
     }
     const newDocument: Document = {
@@ -104,7 +115,7 @@ export default function Admin({ users, events, announcements, documents, branche
 
   const handleCreateBranch = () => {
     if (!branchData.name || !branchData.region) {
-      alert('Please fill in all required fields');
+      notify('Please fill in all required fields', 'warning');
       return;
     }
     const newBranch: Branch = {
@@ -184,7 +195,7 @@ export default function Admin({ users, events, announcements, documents, branche
               <div className="fg"><label>Start Date *</label><input type="date" value={eventData.startDate} onChange={(e) => setEventData({ ...eventData, startDate: e.target.value })} /></div>
               <div className="fg"><label>End Date *</label><input type="date" value={eventData.endDate} onChange={(e) => setEventData({ ...eventData, endDate: e.target.value })} /></div>
               <div className="fg"><label>Location *</label><input type="text" value={eventData.location} onChange={(e) => setEventData({ ...eventData, location: e.target.value })} placeholder="e.g. JOPACC Campus" /></div>
-              <div className="fg"><label>Status</label><div className="sel-wrap"><select value={eventData.status} onChange={(e) => setEventData({ ...eventData, status: e.target.value as 'upcoming' | 'past' })}><option value="upcoming">Upcoming</option><option value="past">Past</option></select></div></div>
+              <div className="fg"><label>Status</label><HeroSelect value={eventData.status} onChange={(status) => setEventData({ ...eventData, status: status as 'upcoming' | 'past' })} options={[{ value: 'upcoming', label: 'Upcoming' }, { value: 'past', label: 'Past' }]} ariaLabel="Event status" /></div>
               <button className="btn btn-navy" onClick={handleCreateEvent}>Create Event →</button>
             </div>
           )}
@@ -218,8 +229,8 @@ export default function Admin({ users, events, announcements, documents, branche
             <div className="reg-panel open">
               <div className="divider"></div>
               <div className="fg"><label>Title *</label><input type="text" value={announcementData.title} onChange={(e) => setAnnouncementData({ ...announcementData, title: e.target.value })} placeholder="e.g. Annual Meeting Schedule" /></div>
-              <div className="fg"><label>Content *</label><textarea value={announcementData.content} onChange={(e) => setAnnouncementData({ ...announcementData, content: e.target.value })} placeholder="Announcement details..." style={{ width: '100%', padding: '15px 16px', border: '2px solid var(--lgray)', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit', minHeight: '100px', resize: 'vertical' }} /></div>
-              <div className="fg"><label>Priority</label><div className="sel-wrap"><select value={announcementData.priority} onChange={(e) => setAnnouncementData({ ...announcementData, priority: e.target.value as 'normal' | 'urgent' })}><option value="normal">Normal</option><option value="urgent">Urgent</option></select></div></div>
+              <div className="fg"><label>Content *</label><textarea value={announcementData.content} onChange={(e) => setAnnouncementData({ ...announcementData, content: e.target.value })} placeholder="Announcement details..." style={{ width: '100%', minHeight: '100px', resize: 'vertical' }} /></div>
+              <div className="fg"><label>Priority</label><HeroSelect value={announcementData.priority} onChange={(priority) => setAnnouncementData({ ...announcementData, priority: priority as 'normal' | 'urgent' })} options={[{ value: 'normal', label: 'Normal' }, { value: 'urgent', label: 'Urgent' }]} ariaLabel="Announcement priority" /></div>
               <button className="btn btn-navy" onClick={handleCreateAnnouncement}>Post Announcement →</button>
             </div>
           )}
@@ -249,7 +260,7 @@ export default function Admin({ users, events, announcements, documents, branche
             <div className="reg-panel open">
               <div className="divider"></div>
               <div className="fg"><label>Document Title *</label><input type="text" value={documentData.title} onChange={(e) => setDocumentData({ ...documentData, title: e.target.value })} placeholder="e.g. Annual Meeting Minutes" /></div>
-              <div className="fg"><label>Type</label><div className="sel-wrap"><select value={documentData.type} onChange={(e) => setDocumentData({ ...documentData, type: e.target.value as 'minutes' | 'constitution' | 'report' | 'other' })}><option value="minutes">Meeting Minutes</option><option value="constitution">Constitution</option><option value="report">Report</option><option value="other">Other</option></select></div></div>
+              <div className="fg"><label>Type</label><HeroSelect value={documentData.type} onChange={(type) => setDocumentData({ ...documentData, type: type as 'minutes' | 'constitution' | 'report' | 'other' })} options={[{ value: 'minutes', label: 'Meeting Minutes' }, { value: 'constitution', label: 'Constitution' }, { value: 'report', label: 'Report' }, { value: 'other', label: 'Other' }]} ariaLabel="Document type" /></div>
               <div className="fg"><label>File URL *</label><input type="text" value={documentData.fileUrl} onChange={(e) => setDocumentData({ ...documentData, fileUrl: e.target.value })} placeholder="e.g. https://cloudinary.com/..." /><div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>Enter Cloudinary or file storage URL</div></div>
               <button className="btn btn-navy" onClick={handleCreateDocument}>Upload Document →</button>
             </div>

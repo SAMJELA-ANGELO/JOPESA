@@ -15,7 +15,7 @@ export default function AlumniEventsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const payload = await apiFetch(`/events?skip=0&take=100&status=PUBLISHED`);
+        const payload = await apiFetch(`/events?skip=0&take=100&status=PUBLISHED,COMPLETED`);
         const list = unwrapList<Event>(payload).sort(
           (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
         );

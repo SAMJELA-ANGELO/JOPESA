@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Download, FileText } from 'lucide-react';
 import { Document } from '@/types';
-import { apiFetch, formatDate, unwrapList } from '@/lib/api';
+import { apiFetch, formatDate, resolveMediaUrl, unwrapList } from '@/lib/api';
 import { downloadFile } from '@/lib/download';
 
 export default function AlumniDocumentsPage() {
@@ -20,6 +20,7 @@ export default function AlumniDocumentsPage() {
         setDocuments(
           unwrapList<Document>(payload).map((doc) => ({
             ...doc,
+            fileUrl: resolveMediaUrl(doc.fileUrl),
             type: (doc.fileType || doc.type || 'OTHER').toLowerCase(),
             uploadedAt: doc.uploadedAt || (doc as Document & { createdAt?: string }).createdAt || '',
             uploadedBy: doc.uploadedBy || doc.category || 'Admin',
@@ -89,7 +90,14 @@ export default function AlumniDocumentsPage() {
               </div>
             </div>
             <button
-              onClick={() => downloadFile(doc.fileUrl, doc.title)}
+              type="button"
+              onClick={() => router.push(`/alumni/documents/${doc.id}`)}
+              style={{ marginTop: 'auto', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--lgray)', background: '#fff', color: 'var(--navy)', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Read / preview
+            </button>
+            <button
+              onClick={() => downloadFile(doc.fileUrl, doc.title, doc.fileType || doc.type)}
               style={{
                 marginTop: 'auto',
                 display: 'inline-flex',

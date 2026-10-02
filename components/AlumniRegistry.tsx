@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Search, Trash2, GraduationCap } from 'lucide-react';
+import HeroSelect from '@/components/HeroSelect';
 import { getBatchInfo, maxClass, updateYearHint, CLASS_NAMES, SY } from '@/lib/batchUtils';
 import { Alumni, Branch } from '@/types';
 
@@ -134,29 +135,11 @@ export default function AlumniRegistry({ alumni, branches, onAlumniChange, onSho
             </div>
             <div className="fg">
               <label>Class at Entry *</label>
-              <div className="sel-wrap">
-                <select value={regClass} onChange={(e) => setRegClass(e.target.value === '' ? '' : parseInt(e.target.value))}>
-                  <option value="">— Select class —</option>
-                  <option value="1">Form 1</option>
-                  <option value="2">Form 2</option>
-                  <option value="3">Form 3</option>
-                  <option value="4">Form 4</option>
-                  <option value="5">Form 5</option>
-                  <option value="6">Lower Sixth (LS6)</option>
-                  <option value="7">Upper Sixth (US6)</option>
-                </select>
-              </div>
+              <HeroSelect value={regClass === '' ? '' : String(regClass)} onChange={(value) => setRegClass(value === '' ? '' : parseInt(value))} ariaLabel="Class at entry" placeholder="Select class" options={[{ value: '', label: '— Select class —' }, { value: '1', label: 'Form 1' }, { value: '2', label: 'Form 2' }, { value: '3', label: 'Form 3' }, { value: '4', label: 'Form 4' }, { value: '5', label: 'Form 5' }, { value: '6', label: 'Lower Sixth (LS6)' }, { value: '7', label: 'Upper Sixth (US6)' }]} />
             </div>
             <div className="fg">
               <label>Branch *</label>
-              <div className="sel-wrap">
-                <select value={regBranchId} onChange={(e) => setRegBranchId(e.target.value)}>
-                  <option value="">— Select branch —</option>
-                  {branches.map(branch => (
-                    <option key={branch.id} value={branch.id}>{branch.name} ({branch.region})</option>
-                  ))}
-                </select>
-              </div>
+              <HeroSelect value={regBranchId} onChange={setRegBranchId} ariaLabel="Branch" placeholder="Select branch" options={[{ value: '', label: '— Select branch —' }, ...branches.map((branch) => ({ value: branch.id, label: `${branch.name} (${branch.region})` }))]} />
             </div>
             <button className="btn btn-navy" onClick={registerAlumni}>Register →</button>
             {regError && (

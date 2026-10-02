@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Shield, Lock, Mail, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -30,6 +30,12 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
+  useEffect(() => {
+    if (localStorage.getItem('jopesa_admin_token')) {
+      router.replace('/admin/dashboard');
+    }
+  }, [router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -49,7 +55,7 @@ export default function AdminLogin() {
 
       const data = await response.json();
       localStorage.setItem('jopesa_admin_token', data.accessToken);
-      router.push('/admin/dashboard');
+      router.replace('/admin/dashboard');
     } catch (err) {
       console.error('Admin login failed:', err);
       setError(err instanceof Error && err.message ? err.message : 'Invalid credentials or backend unavailable');

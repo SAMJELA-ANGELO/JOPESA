@@ -13,6 +13,7 @@ interface PublicMemberProfile {
   coverImage?: string | null;
   currentRole?: string | null;
   currentCompany?: string | null;
+  relationshipStatus?: string | null;
   location?: string | null;
   linkedIn?: string | null;
   website?: string | null;
@@ -101,6 +102,12 @@ export default function AlumniDirectoryDetailPage() {
             <div className="detail-meta-row">
               <Shield size={14} />
               <span>{member.membershipBadge} member</span>
+            </div>
+          )}
+          {member.relationshipStatus && (
+            <div className="detail-meta-row">
+              <UserRound size={14} />
+              <span>{member.relationshipStatus}</span>
             </div>
           )}
           {member.user?.email && (

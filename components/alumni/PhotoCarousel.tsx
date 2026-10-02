@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface CarouselSlide {
   id: string;
   url: string;
   title: string;
   eventId: string;
+  status?: 'Past' | 'Upcoming';
+  date?: string;
+  location?: string;
 }
 
 interface PhotoCarouselProps {
@@ -18,10 +21,6 @@ interface PhotoCarouselProps {
 export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    setIndex(0);
-  }, [slides.length]);
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -46,12 +45,13 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
           fontWeight: 600,
         }}
       >
-        Event photos will appear here once uploaded
+        Events will appear here once available
       </div>
     );
   }
 
-  const slide = slides[index];
+  const activeIndex = index % slides.length;
+  const slide = slides[activeIndex];
 
   return (
     <div
@@ -67,21 +67,40 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
       onClick={() => router.push(`/alumni/events/${slide.eventId}`)}
     >
       {slides.map((item, i) => (
-        <img
-          key={item.id}
-          src={item.url}
-          alt={item.title}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: i === index ? 1 : 0,
-            transform: i === index ? 'scale(1)' : 'scale(1.05)',
-            transition: 'opacity 0.6s ease, transform 6s ease',
-          }}
-        />
+        item.url ? (
+          <img
+            key={item.id}
+            src={item.url}
+            alt={item.title}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: i === activeIndex ? 1 : 0,
+              transform: i === activeIndex ? 'scale(1)' : 'scale(1.05)',
+              transition: 'opacity 0.6s ease, transform 6s ease',
+            }}
+          />
+        ) : (
+          <div
+            key={item.id}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, var(--navy), var(--navy2))',
+              color: 'var(--gold2)',
+              opacity: i === activeIndex ? 1 : 0,
+              transition: 'opacity 0.6s ease',
+            }}
+          >
+            <CalendarDays size={64} />
+          </div>
+        )
       ))}
 
       <div
@@ -108,7 +127,7 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
             display: 'inline-block',
             padding: '6px 12px',
             borderRadius: 999,
-            background: 'rgba(200,150,12,0.9)',
+            background: slide.status === 'Past' ? 'rgba(107,114,128,0.92)' : 'rgba(4,120,87,0.92)',
             color: '#fff',
             fontSize: 11,
             fontWeight: 700,
@@ -116,7 +135,7 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
             marginBottom: 10,
           }}
         >
-          Event Gallery
+          {slide.status || 'Event'}
         </div>
         <div
           style={{
@@ -128,6 +147,11 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
         >
           {slide.title}
         </div>
+        {(slide.date || slide.location) && (
+          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.88)' }}>
+            {[slide.date, slide.location].filter(Boolean).join(' · ')}
+          </div>
+        )}
       </div>
 
       {slides.length > 1 && (
@@ -204,11 +228,11 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
                   setIndex(i);
                 }}
                 style={{
-                  width: i === index ? 18 : 8,
+                  width: i === activeIndex ? 18 : 8,
                   height: 8,
                   borderRadius: 999,
                   border: 'none',
-                  background: i === index ? 'var(--gold2)' : 'rgba(255,255,255,0.55)',
+                  background: i === activeIndex ? 'var(--gold2)' : 'rgba(255,255,255,0.55)',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                 }}

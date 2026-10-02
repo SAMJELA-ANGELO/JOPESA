@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 
 import DetailPageLayout from '@/components/alumni/DetailPageLayout';
+import HeroSelect from '@/components/HeroSelect';
 
 import EventRegistrationModal from '@/components/alumni/EventRegistrationModal';
 
@@ -62,6 +63,8 @@ export default function AlumniEventDetailPage() {
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
   const [contributions, setContributions] = useState<Contribution[]>([]);
 
   const [selectedContributionId, setSelectedContributionId] = useState('');
@@ -72,9 +75,11 @@ export default function AlumniEventDetailPage() {
 
   const images = useMemo(() => {
 
-    if (photos.length > 0) return photos.map((photo) => photo.url);
+    const eventUrls = event ? eventImages(event).map((url) => (typeof url === 'string' ? url : '')).filter(Boolean) : [];
 
-    return event ? eventImages(event) : [];
+    const photoUrls = photos.map((photo) => photo.url).filter(Boolean);
+
+    return Array.from(new Set([...eventUrls, ...photoUrls])).map((url) => url);
 
   }, [event, photos]);
 
@@ -288,13 +293,32 @@ export default function AlumniEventDetailPage() {
 
                   <div key={`${url}-${index}`} className="alumni-gallery-item">
 
-                    <img src={url} alt={`${event.title} ${index + 1}`} />
+                    <img
+                      src={url}
+                      alt={`${event.title} ${index + 1}`}
+                      onClick={() => setPreviewImage(url)}
+                      style={{ cursor: 'pointer' }}
+                    />
+
+                    <button
+
+                      className="alumni-download-chip"
+
+                      onClick={() => setPreviewImage(url)}
+
+                    >
+
+                      <Download size={13} /> Preview
+
+                    </button>
 
                     <button
 
                       className="alumni-download-chip"
 
                       onClick={() => downloadFile(url, `${event.title}-${index + 1}.jpg`)}
+
+                      style={{ marginTop: 6 }}
 
                     >
 
@@ -317,6 +341,29 @@ export default function AlumniEventDetailPage() {
       />
 
 
+
+      {previewImage && (
+        <div className="gallery-preview-backdrop" role="dialog" aria-modal="true" aria-label="Event image preview" onClick={() => setPreviewImage(null)}>
+          <div className="gallery-preview-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="gallery-preview-header">
+              <div>
+                <h2>{event.title}</h2>
+              </div>
+              <button type="button" onClick={() => setPreviewImage(null)} aria-label="Close preview" className="gallery-preview-close"><X size={20} /></button>
+            </div>
+            {/\.(mp4|webm|mov|m4v|avi|mkv|ogg|3gp)(?:$|[?#])/i.test(previewImage) || /\/video\//i.test(previewImage) ? (
+              <video src={previewImage} controls autoPlay playsInline className="gallery-preview-media" />
+            ) : (
+              <img src={previewImage} alt={event.title} className="gallery-preview-media" />
+            )}
+            <div className="gallery-preview-actions">
+              <button type="button" onClick={() => downloadFile(previewImage, `${event.title}-preview.jpg`)} className="gallery-action-btn gallery-action-btn-primary">
+                <Download size={16} /> Download
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <EventRegistrationModal
 
@@ -372,18 +419,20 @@ export default function AlumniEventDetailPage() {
 
               <div style={{ marginBottom: 20 }}>
                 <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 700, color: 'var(--navy)' }}>Select Contribution</label>
-                <select
+                <HeroSelect
                   className="payment-select"
                   value={selectedContributionId}
-                  onChange={(e) => setSelectedContributionId(e.target.value)}
-                >
-                  <option value="">Choose a payment option</option>
-                  {contributions.map((contribution) => (
-                    <option key={contribution.id} value={contribution.id}>
-                      {contribution.title} - {contribution.installments?.reduce((sum, inst) => sum + (inst.amount || 0), 0).toLocaleString()} XAF
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedContributionId}
+                  ariaLabel="Select contribution"
+                  placeholder="Choose a payment option"
+                  options={[
+                    { value: '', label: 'Choose a payment option' },
+                    ...contributions.map((contribution) => ({
+                      value: contribution.id,
+                      label: `${contribution.title} - ${contribution.installments?.reduce((sum, inst) => sum + (inst.amount || 0), 0).toLocaleString()} XAF`,
+                    })),
+                  ]}
+                />
               </div>
 
               {selectedContributionId && (() => {

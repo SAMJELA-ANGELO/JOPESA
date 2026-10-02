@@ -22,6 +22,7 @@ import {
 
 } from 'lucide-react';
 
+
 import { Batch, Branch } from '@/types';
 
 import { apiFetch, getApiBase, getAlumniToken, unwrapList } from '@/lib/api';
@@ -37,6 +38,7 @@ interface ProfileForm {
   email: string;
 
   phone: string;
+  relationshipStatus: string;
 
   batchId: string;
 
@@ -73,6 +75,7 @@ const emptyForm: ProfileForm = {
   email: '',
 
   phone: '',
+  relationshipStatus: '',
 
   batchId: '',
 
@@ -161,6 +164,7 @@ export default function AlumniProfilePage() {
           email: profile.user?.email || '',
 
           phone: profile.user?.phone || '',
+          relationshipStatus: profile.relationshipStatus || '',
 
           batchId: profile.batchId || profile.batch?.id || '',
 
@@ -353,6 +357,7 @@ export default function AlumniProfilePage() {
             lastName: form.lastName,
 
             phone: form.phone || undefined,
+            relationshipStatus: form.relationshipStatus,
 
             batchId: form.batchId,
 
@@ -612,15 +617,9 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">First name</label>
 
                   <input
-
-                    className="alumni-input"
-
                     value={form.firstName}
-
-                    onChange={(e) => setField('firstName', e.target.value)}
-
+                    onChange={(event) => setField('firstName', event.target.value)}
                     required
-
                   />
 
                 </div>
@@ -630,15 +629,9 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">Last name</label>
 
                   <input
-
-                    className="alumni-input"
-
                     value={form.lastName}
-
-                    onChange={(e) => setField('lastName', e.target.value)}
-
+                    onChange={(event) => setField('lastName', event.target.value)}
                     required
-
                   />
 
                 </div>
@@ -647,7 +640,7 @@ export default function AlumniProfilePage() {
 
                   <label className="alumni-label">Email</label>
 
-                  <input className="alumni-input" value={form.email} disabled />
+                  <input value={form.email} disabled />
 
                 </div>
 
@@ -656,16 +649,27 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">Phone number</label>
 
                   <input
-
-                    className="alumni-input"
-
                     value={form.phone}
-
-                    onChange={(e) => setField('phone', e.target.value)}
-
+                    onChange={(event) => setField('phone', event.target.value)}
                     placeholder="+237 6XX XXX XXX"
-
                   />
+
+                </div>
+
+                <div className="alumni-field">
+
+                  <label className="alumni-label">Relationship status</label>
+
+                  <select
+                    value={form.relationshipStatus || ''}
+                    onChange={(event) => setField('relationshipStatus', event.target.value)}
+                  >
+                    <option value="">Prefer not to share</option>
+                    <option value="Single">Single</option>
+                    <option value="In a relationship">In a relationship</option>
+                    <option value="Married">Married</option>
+                    <option value="Other">Other</option>
+                  </select>
 
                 </div>
 
@@ -685,35 +689,12 @@ export default function AlumniProfilePage() {
 
                   <label className="alumni-label">Batch</label>
 
-                  <div className="alumni-select-wrap">
-
-                    <select
-
-                      className="alumni-input"
-
-                      value={form.batchId}
-
-                      onChange={(e) => setField('batchId', e.target.value)}
-
-                      required
-
-                    >
-
-                      <option value="">Select batch</option>
-
-                      {batches.map((batch) => (
-
-                        <option key={batch.id} value={batch.id}>
-
-                          {batch.name || `Batch ${batch.year}`}
-
-                        </option>
-
-                      ))}
-
-                    </select>
-
-                  </div>
+                  <select value={form.batchId} onChange={(event) => setField('batchId', event.target.value)} required>
+                    <option value="" disabled>Select batch</option>
+                    {batches.map((batch) => (
+                      <option key={batch.id} value={batch.id}>{batch.name || `Batch ${batch.year}`}</option>
+                    ))}
+                  </select>
 
                 </div>
 
@@ -721,35 +702,12 @@ export default function AlumniProfilePage() {
 
                   <label className="alumni-label">Chapter / Branch</label>
 
-                  <div className="alumni-select-wrap">
-
-                    <select
-
-                      className="alumni-input"
-
-                      value={form.branchId}
-
-                      onChange={(e) => setField('branchId', e.target.value)}
-
-                      required
-
-                    >
-
-                      <option value="">Select chapter</option>
-
-                      {branches.map((branch) => (
-
-                        <option key={branch.id} value={branch.id}>
-
-                          {branch.name}
-
-                        </option>
-
-                      ))}
-
-                    </select>
-
-                  </div>
+                  <select value={form.branchId} onChange={(event) => setField('branchId', event.target.value)} required>
+                    <option value="" disabled>Select chapter</option>
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>{branch.name}</option>
+                    ))}
+                  </select>
 
                 </div>
 
@@ -770,15 +728,9 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">Current role</label>
 
                   <input
-
-                    className="alumni-input"
-
                     value={form.currentRole}
-
-                    onChange={(e) => setField('currentRole', e.target.value)}
-
+                    onChange={(event) => setField('currentRole', event.target.value)}
                     placeholder="e.g. Software Engineer"
-
                   />
 
                 </div>
@@ -788,15 +740,9 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">Company</label>
 
                   <input
-
-                    className="alumni-input"
-
                     value={form.currentCompany}
-
-                    onChange={(e) => setField('currentCompany', e.target.value)}
-
+                    onChange={(event) => setField('currentCompany', event.target.value)}
                     placeholder="e.g. Acme Corp"
-
                   />
 
                 </div>
@@ -806,15 +752,9 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">Location</label>
 
                   <input
-
-                    className="alumni-input"
-
                     value={form.location}
-
-                    onChange={(e) => setField('location', e.target.value)}
-
+                    onChange={(event) => setField('location', event.target.value)}
                     placeholder="City, Country"
-
                   />
 
                 </div>
@@ -834,19 +774,11 @@ export default function AlumniProfilePage() {
                 <label className="alumni-label">Bio</label>
 
                 <textarea
-
-                  className="alumni-input"
-
-                  rows={5}
-
                   value={form.bio}
-
-                  onChange={(e) => setField('bio', e.target.value)}
-
+                  onChange={(event) => setField('bio', event.target.value)}
                   placeholder="Tell the alumni community a bit about yourself..."
-
-                  style={{ resize: 'vertical', minHeight: 120 }}
-
+                  rows={5}
+                  className="w-full"
                 />
 
               </div>
@@ -870,17 +802,10 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">LinkedIn</label>
 
                   <input
-
-                    className="alumni-input"
-
                     type="url"
-
                     value={form.linkedIn}
-
-                    onChange={(e) => setField('linkedIn', e.target.value)}
-
+                    onChange={(event) => setField('linkedIn', event.target.value)}
                     placeholder="https://linkedin.com/in/..."
-
                   />
 
                 </div>
@@ -890,17 +815,10 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">Website</label>
 
                   <input
-
-                    className="alumni-input"
-
                     type="url"
-
                     value={form.website}
-
-                    onChange={(e) => setField('website', e.target.value)}
-
+                    onChange={(event) => setField('website', event.target.value)}
                     placeholder="https://..."
-
                   />
 
                 </div>
@@ -910,15 +828,9 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">Twitter / X</label>
 
                   <input
-
-                    className="alumni-input"
-
                     value={form.twitter}
-
-                    onChange={(e) => setField('twitter', e.target.value)}
-
+                    onChange={(event) => setField('twitter', event.target.value)}
                     placeholder="@username"
-
                   />
 
                 </div>
@@ -928,15 +840,9 @@ export default function AlumniProfilePage() {
                   <label className="alumni-label">Instagram</label>
 
                   <input
-
-                    className="alumni-input"
-
                     value={form.instagram}
-
-                    onChange={(e) => setField('instagram', e.target.value)}
-
+                    onChange={(event) => setField('instagram', event.target.value)}
                     placeholder="@username"
-
                   />
 
                 </div>

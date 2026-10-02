@@ -4,7 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Megaphone } from 'lucide-react';
 import { Announcement } from '@/types';
-import { apiFetch, formatDate, unwrapList } from '@/lib/api';
+import { apiFetch, formatDate, resolveMediaUrl, unwrapList } from '@/lib/api';
+
+function AnnouncementImage({ src, title }: { src: string; title: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <div className="announcement-card-image-placeholder"><Megaphone size={28} /></div>;
+  }
+  return <img src={resolveMediaUrl(src)} alt={title} className="announcement-card-image" onError={() => setFailed(true)} />;
+}
 
 export default function AlumniAnnouncementsPage() {
   const router = useRouter();
@@ -18,7 +26,7 @@ export default function AlumniAnnouncementsPage() {
         const payload = await apiFetch(`/announcements?skip=0&take=100`);
         const list = unwrapList<Announcement>(payload).map((item) => ({
           ...item,
-          imageUrl: item.imageUrl || item.image,
+          imageUrl: resolveMediaUrl(item.imageUrl || item.image),
           createdBy: item.createdBy || 'Admin',
         }));
         list.sort((a, b) => Number(!!b.isPinned) - Number(!!a.isPinned));
@@ -80,11 +88,7 @@ export default function AlumniAnnouncementsPage() {
               onClick={() => router.push(`/alumni/announcements/${item.id}`)}
             >
               {(item.imageUrl || item.image) ? (
-                <img
-                  src={item.imageUrl || item.image}
-                  alt={item.title}
-                  className="announcement-card-image"
-                />
+                <AnnouncementImage src={item.imageUrl || item.image || ''} title={item.title} />
               ) : (
                 <div className="announcement-card-image-placeholder">
                   <Megaphone size={28} />
