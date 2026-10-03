@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -18,6 +18,7 @@ import SectionHeader from '@/components/alumni/SectionHeader';
 import { Announcement, Document, Event, Branch, Photo } from '@/types';
 import { apiFetch, formatDateRange, unwrapList } from '@/lib/api';
 import { downloadFile } from '@/lib/download';
+import { AlumniAccessContext } from '@/components/alumni/AlumniAccessContext';
 
 const isPastEvent = (event: Event, currentTime: number | null) => {
   if (event.status === 'COMPLETED' || event.status === 'CANCELLED' || event.status === 'past') return true;
@@ -29,6 +30,7 @@ const isPastEvent = (event: Event, currentTime: number | null) => {
 
 export default function AlumniDashboardPage() {
   const router = useRouter();
+  const { hasFullAccess } = useContext(AlumniAccessContext);
   const [events, setEvents] = useState<Event[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -37,11 +39,18 @@ export default function AlumniDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentTime, setCurrentTime] = useState<number | null>(null);
+  const [welcomeVisible, setWelcomeVisible] = useState(true);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setCurrentTime(Date.now()), 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const timer = window.setTimeout(() => setWelcomeVisible(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
 
   useEffect(() => {
     const load = async () => {
@@ -142,17 +151,22 @@ export default function AlumniDashboardPage() {
 
   return (
     <div className="animate-float-in">
-      <div className="page-header page-header-dashboard">
-        <div className="page-header-icon">
-          <CalendarDays size={32} />
+      {welcomeVisible && (
+        <div className="page-header page-header-dashboard welcome-temporary">
+          <div className="page-header-icon">
+            <CalendarDays size={32} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h1 className="page-header-title">Welcome back</h1>
+            <p className="page-header-subtitle">
+              Explore events, announcements, documents, and more from the JOPESA alumni network
+            </p>
+            <div className="welcome-timeout-track" aria-label="Welcome message disappears in three seconds">
+              <div className="welcome-timeout-progress" />
+            </div>
+          </div>
         </div>
-        <div>
-          <h1 className="page-header-title">Welcome back</h1>
-          <p className="page-header-subtitle">
-            Explore events, announcements, documents, and more from the JOPESA alumni network
-          </p>
-        </div>
-      </div>
+      )}
 
       {error && (
         <div className="alumni-card animate-float-in" style={{ marginBottom: 16, color: 'var(--err)' }}>
@@ -164,6 +178,12 @@ export default function AlumniDashboardPage() {
         <PhotoCarousel slides={carouselSlides} />
       </section>
 
+      {!hasFullAccess && (
+        <div className="dashboard-locked-notice">
+          Pay at least one registration installment to view the rest of your dashboard.
+        </div>
+      )}
+      <div className={!hasFullAccess ? 'dashboard-locked-content' : undefined}>
       <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-2">
         <SectionHeader
           title="Events"
@@ -369,6 +389,7 @@ export default function AlumniDashboardPage() {
           </Link>
         </div>
       </section>
+      </div>
     </div>
   );
 }

@@ -94,7 +94,7 @@ export default function AdminDashboard() {
   const [editingContributionId, setEditingContributionId] = useState<string | null>(null);
   const [contributionData, setContributionData] = useState({
     title: '',
-    type: 'EVENT_REGISTRATION' as 'EVENT_REGISTRATION' | 'ANNUAL_FEE' | 'GENERAL' | 'DONATION' | 'PROJECT' | 'OTHER',
+    type: 'EVENT_REGISTRATION' as 'EVENT_REGISTRATION' | 'REGISTRATION_FEE' | 'ANNUAL_FEE' | 'GENERAL' | 'DONATION' | 'PROJECT' | 'OTHER',
     description: '',
     eventId: '' as string,
     installments: [] as Array<{ id: string; label: string; amount: number; dueDate: string }>,
@@ -2778,6 +2778,7 @@ export default function AdminDashboard() {
                   <div className="fg"><label>Type *</label>
                     <select value={contributionData.type} onChange={(e) => setContributionData({ ...contributionData, type: e.target.value as any, installments: e.target.value === 'DONATION' ? [] : contributionData.installments })}>
                       <option value="EVENT_REGISTRATION">Event Registration Fee</option>
+                      <option value="REGISTRATION_FEE">Alumni Registration Fee</option>
                       <option value="ANNUAL_FEE">Annual Fee</option>
                       <option value="GENERAL">General</option>
                       <option value="DONATION">Voluntary Donation</option>

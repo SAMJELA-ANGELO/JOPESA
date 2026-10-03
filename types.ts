@@ -80,6 +80,7 @@ export interface Photo {
   url: string;
   externalUrl?: string;
   uploadedAt: string;
+  eventDate?: string;
   eventTitle?: string;
   event?: {
     id: string;
@@ -128,6 +129,7 @@ export interface ContributionPayment {
   status?: string;
   paymentReference?: string;
   notes?: string;
+  createdAt?: string;
 }
 
 export interface Contribution {
@@ -145,6 +147,22 @@ export interface Contribution {
   payments?: ContributionPayment[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RegistrationMember {
+  id: string;
+  name: string;
+  profileImage?: string | null;
+  registrationStatus: 'REGISTERED' | 'PENDING';
+  membershipBadge: 'ACTIVE' | 'PASSIVE' | 'INACTIVE' | 'DORMANT' | string;
+}
+
+export interface RegistrationOverview {
+  batch: { id: string; name: string; year: number } | null;
+  contributions: Contribution[];
+  hasPaidRegistration: boolean;
+  isSystemAdmin?: boolean;
+  members: RegistrationMember[];
 }
 
 export interface User {

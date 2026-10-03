@@ -13,6 +13,7 @@ import {
   LogOut,
   X,
   UserRound,
+  LockKeyhole,
 } from 'lucide-react';
 import { clearAlumniSession, getAlumniUser } from '@/lib/api';
 
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { href: '/alumni/gallery', label: 'Gallery', icon: Images },
   { href: '/alumni/batch-finder', label: 'Batch Finder', icon: Search },
   { href: '/alumni/chapters', label: 'Chapters', icon: Building2 },
+  { href: '/alumni/registration', label: 'Registration', icon: FileText },
   { href: '/alumni/contributions', label: 'Contributions', icon: FileText },
   { href: '/alumni/directory', label: 'Alumni Directory', icon: Search },
   { href: '/alumni/profile', label: 'My Profile', icon: UserRound },
@@ -32,9 +34,12 @@ const NAV_ITEMS = [
 interface AlumniSidebarProps {
   open: boolean;
   onClose: () => void;
+  registrationPaid: boolean;
 }
 
-export default function AlumniSidebar({ open, onClose }: AlumniSidebarProps) {
+const FREE_NAV_ITEMS = ['/alumni/dashboard', '/alumni/batch-finder', '/alumni/chapters', '/alumni/registration'];
+
+export default function AlumniSidebar({ open, onClose, registrationPaid }: AlumniSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const user = getAlumniUser<{ firstName?: string; lastName?: string; email?: string }>();
@@ -115,11 +120,12 @@ export default function AlumniSidebar({ open, onClose }: AlumniSidebarProps) {
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-            const active = isActive(href);
+            const locked = !registrationPaid && !FREE_NAV_ITEMS.includes(href);
+            const active = !locked && isActive(href);
             return (
               <Link
                 key={href}
-                href={href}
+                href={locked ? '/alumni/registration?locked=1' : href}
                 onClick={onClose}
                 style={{
                   display: 'flex',
@@ -137,6 +143,7 @@ export default function AlumniSidebar({ open, onClose }: AlumniSidebarProps) {
               >
                 <Icon size={18} />
                 {label}
+                {locked && <LockKeyhole size={14} style={{ marginLeft: 'auto', opacity: 0.8 }} />}
               </Link>
             );
           })}

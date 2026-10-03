@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Images, CheckSquare, Square, Expand, X } from 'lucide-react';
+import { Download, Images, CheckSquare, Square, Expand, X, ChevronLeft, ChevronRight, Maximize2, Play, Pause } from 'lucide-react';
 import { Event, Photo } from '@/types';
-import { apiFetch, resolveMediaUrl, unwrapList } from '@/lib/api';
+import { apiFetch, formatDate, resolveMediaUrl, unwrapList } from '@/lib/api';
 import { downloadFile } from '@/lib/download';
 
 interface GalleryGroup {
@@ -18,6 +18,9 @@ export default function AlumniGalleryPage() {
   const [galleryItems, setGalleryItems] = useState<Photo[]>([]);
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
+  const [slideshowPlaying, setSlideshowPlaying] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const previewMediaRef = useRef<HTMLImageElement | HTMLVideoElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -43,13 +46,16 @@ export default function AlumniGalleryPage() {
           apiFetch(`/events?skip=0&take=200`),
         ]);
 
+        const events = unwrapList<Event>(eventsPayload);
+        const eventDates = new Map(events.map((event) => [event.id, event.startDate]));
         const uploadedPhotos = unwrapList<Photo>(photosPayload).map((photo) => ({
           ...photo,
           url: resolveMediaUrl(photo.url),
           eventTitle: photo.event?.title || photo.eventTitle || 'Event photo',
+          eventDate: eventDates.get(photo.eventId) || photo.uploadedAt,
         }));
 
-        const eventPhotos = unwrapList<Event>(eventsPayload).flatMap((event) => {
+        const eventPhotos = events.flatMap((event) => {
           const urls = Array.from(new Set([
             ...(event.image ? [event.image] : []),
             ...(Array.isArray(event.images) ? event.images : []),
@@ -60,12 +66,17 @@ export default function AlumniGalleryPage() {
             eventId: event.id,
             url: resolveMediaUrl(url),
             uploadedAt: event.startDate || '',
+            eventDate: event.startDate || '',
             eventTitle: event.title,
             event: { id: event.id, title: event.title },
           } as Photo));
         });
 
-        setGalleryItems([...eventPhotos, ...uploadedPhotos]);
+        setGalleryItems([...eventPhotos, ...uploadedPhotos].sort((a, b) => {
+          const aDate = new Date(a.eventDate || a.uploadedAt).getTime();
+          const bDate = new Date(b.eventDate || b.uploadedAt).getTime();
+          return (Number.isNaN(bDate) ? 0 : bDate) - (Number.isNaN(aDate) ? 0 : aDate);
+        }));
       } catch (err) {
         console.error(err);
         setError('Unable to load gallery.');
@@ -96,16 +107,53 @@ export default function AlumniGalleryPage() {
     setSelectedPhotos(new Set());
   };
 
+  const movePreview = useCallback((direction: number) => {
+    if (!galleryItems.length) return;
+    const currentIndex = galleryItems.findIndex((photo) => photo.id === previewPhoto?.id);
+    const nextIndex = (Math.max(currentIndex, 0) + direction + galleryItems.length) % galleryItems.length;
+    setPreviewPhoto(galleryItems[nextIndex]);
+  }, [galleryItems, previewPhoto]);
+
   useEffect(() => {
     if (!previewPhoto) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setPreviewPhoto(null);
+      if (event.key === 'ArrowLeft') movePreview(-1);
+      if (event.key === 'ArrowRight') movePreview(1);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [previewPhoto]);
+  }, [previewPhoto, movePreview]);
+
+  useEffect(() => {
+    if (!slideshowPlaying || galleryItems.length < 2) return;
+    const timer = window.setInterval(() => movePreview(1), 3500);
+    return () => window.clearInterval(timer);
+  }, [slideshowPlaying, galleryItems.length, movePreview]);
 
   const isVideoPhoto = (photo: Photo) => /\.(mp4|mov|webm|m4v|avi|mkv|ogg|3gp)(?:$|[?#])/i.test(photo.url) || /\/video\//i.test(photo.url);
+
+  const startSlideshow = () => {
+    if (!previewPhoto && galleryItems.length) setPreviewPhoto(galleryItems[0]);
+    setSlideshowPlaying(true);
+  };
+
+  const toggleFullscreen = async () => {
+    const media = previewMediaRef.current;
+    if (!media) return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if (media.requestFullscreen) {
+        await media.requestFullscreen();
+      } else {
+        setError('Fullscreen viewing is not supported by this browser.');
+      }
+    } catch (fullscreenError) {
+      console.error(fullscreenError);
+      setError('Unable to open fullscreen viewing.');
+    }
+  };
 
   const getDownloadName = (photo: Photo) => {
     const title = (photo.event?.title || photo.eventTitle || 'Event media').replace(/[\\/:*?"<>|]/g, '-');
@@ -137,7 +185,7 @@ export default function AlumniGalleryPage() {
         <div>
           <h1 className="page-header-title">Gallery</h1>
           <p className="page-header-subtitle">
-            Event images and uploaded event media grouped by event.
+            Event media grouped and sorted by the date each event happened.
           </p>
         </div>
       </div>
@@ -204,6 +252,13 @@ export default function AlumniGalleryPage() {
               >
                 <Download size={16} /> Download All
               </button>
+              <button
+                onClick={slideshowPlaying ? () => setSlideshowPlaying(false) : startSlideshow}
+                className="gallery-action-btn gallery-action-btn-primary"
+              >
+                {slideshowPlaying ? <Pause size={16} /> : <Play size={16} />}
+                {slideshowPlaying ? 'Stop slideshow' : 'Start slideshow'}
+              </button>
             </div>
           </div>
 
@@ -243,6 +298,7 @@ export default function AlumniGalleryPage() {
                         <div onClick={() => router.push(`/alumni/events/${photo.eventId || photo.event?.id}`)} className="gallery-item-title">
                           {title}
                         </div>
+                        <div className="gallery-item-date">{formatDate(photo.eventDate || photo.uploadedAt)}</div>
                         <button type="button" onClick={() => setPreviewPhoto(photo)} className="gallery-download-btn">
                           <Expand size={14} /> Preview
                         </button>
@@ -266,21 +322,44 @@ export default function AlumniGalleryPage() {
       )}
 
       {previewPhoto && (
-        <div className="gallery-preview-backdrop" role="dialog" aria-modal="true" aria-label={`${previewPhoto.eventTitle || 'Event media'} preview`} onClick={() => setPreviewPhoto(null)}>
+        <div className="gallery-preview-backdrop" role="dialog" aria-modal="true" aria-label={`${previewPhoto.eventTitle || 'Event media'} preview`} onClick={() => { setPreviewPhoto(null); setSlideshowPlaying(false); }}>
           <div className="gallery-preview-panel" onClick={(event) => event.stopPropagation()}>
             <div className="gallery-preview-header">
               <div>
                 <h2>{previewPhoto.event?.title || previewPhoto.eventTitle || 'Event media'}</h2>
                 <button type="button" onClick={() => router.push(`/alumni/events/${previewPhoto.eventId || previewPhoto.event?.id}`)} className="gallery-preview-event-link">View event details</button>
               </div>
-              <button type="button" onClick={() => setPreviewPhoto(null)} aria-label="Close preview" className="gallery-preview-close"><X size={20} /></button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" onClick={toggleFullscreen} aria-label="View fullscreen" className="gallery-preview-close"><Maximize2 size={18} /></button>
+                <button type="button" onClick={() => { setPreviewPhoto(null); setSlideshowPlaying(false); }} aria-label="Close preview" className="gallery-preview-close"><X size={20} /></button>
+              </div>
             </div>
-            {isVideoPhoto(previewPhoto) ? (
-              <video src={previewPhoto.url} controls autoPlay playsInline className="gallery-preview-media" />
-            ) : (
-              <img src={previewPhoto.url} alt={previewPhoto.event?.title || previewPhoto.eventTitle || 'Event photo'} className="gallery-preview-media" />
-            )}
+            <div
+              className="gallery-preview-stage"
+              onTouchStart={(event) => setTouchStartX(event.touches[0].clientX)}
+              onTouchEnd={(event) => {
+                if (touchStartX === null) return;
+                const distance = event.changedTouches[0].clientX - touchStartX;
+                if (Math.abs(distance) > 45) movePreview(distance > 0 ? -1 : 1);
+                setTouchStartX(null);
+              }}
+            >
+              <button type="button" onClick={() => movePreview(-1)} aria-label="Previous media" className="gallery-preview-nav gallery-preview-prev"><ChevronLeft size={24} /></button>
+              {isVideoPhoto(previewPhoto) ? (
+                <video ref={(node) => { previewMediaRef.current = node; }} src={previewPhoto.url} controls autoPlay playsInline className="gallery-preview-media" />
+              ) : (
+                <img ref={(node) => { previewMediaRef.current = node; }} src={previewPhoto.url} alt={previewPhoto.event?.title || previewPhoto.eventTitle || 'Event photo'} className="gallery-preview-media" />
+              )}
+              <button type="button" onClick={() => movePreview(1)} aria-label="Next media" className="gallery-preview-nav gallery-preview-next"><ChevronRight size={24} /></button>
+            </div>
             <div className="gallery-preview-actions">
+              <span style={{ marginRight: 'auto', color: 'var(--gray)', fontSize: 13 }}>
+                {galleryItems.findIndex((photo) => photo.id === previewPhoto.id) + 1} / {galleryItems.length}
+              </span>
+              <button type="button" onClick={slideshowPlaying ? () => setSlideshowPlaying(false) : () => setSlideshowPlaying(true)} className="gallery-action-btn">
+                {slideshowPlaying ? <Pause size={16} /> : <Play size={16} />}
+                {slideshowPlaying ? 'Pause' : 'Slideshow'}
+              </button>
               <button type="button" onClick={() => downloadFile(previewPhoto.url, getDownloadName(previewPhoto))} className="gallery-action-btn gallery-action-btn-primary">
                 <Download size={16} /> Download
               </button>
