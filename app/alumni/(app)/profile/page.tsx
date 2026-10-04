@@ -439,7 +439,21 @@ export default function AlumniProfilePage() {
 
   if (loading) {
 
-    return <div style={{ color: 'var(--gray)', fontWeight: 600 }}>Loading profile...</div>;
+    return (
+      <div style={{ 
+        minHeight: '80vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        gap: '16px',
+        color: 'var(--navy)',
+        fontWeight: '600'
+      }}>
+        <div className="loading-spinner" style={{ width: '48px', height: '48px', borderWidth: '4px' }} />
+        <span>Loading profile...</span>
+      </div>
+    );
 
   }
 

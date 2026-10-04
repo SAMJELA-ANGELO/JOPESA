@@ -1060,7 +1060,7 @@ export default function AdminDashboard() {
     if (validFiles.length !== nextFiles.length) {
       showToastMessage('Some event images are larger than 5 GB and were not added.', 'warning');
     }
-    setEventImageFiles(validFiles);
+    setEventImageFiles((currentFiles) => [...currentFiles, ...validFiles]);
   };
 
   const handleEditAnnouncement = (announcement: Announcement) => {
@@ -2168,17 +2168,23 @@ export default function AdminDashboard() {
                   <div className="fg"><label>End Date *</label><input type="date" value={eventData.endDate} onChange={(e) => setEventData({ ...eventData, endDate: e.target.value })} /></div>
                 </div>
                 <div className="fg"><label>Description</label><textarea value={eventData.description} onChange={(e) => setEventData({ ...eventData, description: e.target.value })} placeholder="Event details..." style={{ width: '100%', padding: '15px 16px', border: '2px solid var(--lgray)', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit', minHeight: '80px', resize: 'vertical' }} /></div>
-                <div className="fg"><label>Event Images</label><input type="file" multiple accept="image/*" onChange={(e) => handleEventImageSelection(e.target.files)} style={{ width: '100%', padding: '15px 16px', border: '2px solid var(--lgray)', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit' }} /><div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>Upload one or more event images</div></div>
+                <div className="fg"><label>Event Images</label><input type="file" multiple accept="image/*" onChange={(e) => { handleEventImageSelection(e.target.files); e.currentTarget.value = ''; }} style={{ width: '100%', padding: '15px 16px', border: '2px solid var(--lgray)', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit' }} /><div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>Upload one or more event images. You can add more images or remove any selected image below.</div></div>
                 {(eventImageFiles.length > 0 || eventData.images?.length) && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '8px' }}>
                     {eventImageFiles.map((file, index) => (
-                      <div key={`new-${index}`} style={{ border: '1px solid var(--lgray)', borderRadius: '8px', overflow: 'hidden' }}>
+                      <div key={`new-${index}-${file.name}`} style={{ position: 'relative', border: '1px solid var(--lgray)', borderRadius: '8px', overflow: 'hidden' }}>
                         <img src={URL.createObjectURL(file)} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                        <button type="button" onClick={() => setEventImageFiles((currentFiles) => currentFiles.filter((_, fileIndex) => fileIndex !== index))} aria-label={`Remove selected image ${file.name}`} style={{ position: 'absolute', top: 6, right: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, background: '#fff', border: '1px solid var(--lgray)', borderRadius: '50%', cursor: 'pointer' }}>
+                          <X size={14} />
+                        </button>
                       </div>
                     ))}
                     {eventData.images?.map((image, index) => (
-                      <div key={`existing-${index}`} style={{ border: '1px solid var(--lgray)', borderRadius: '8px', overflow: 'hidden' }}>
+                      <div key={`existing-${index}`} style={{ position: 'relative', border: '1px solid var(--lgray)', borderRadius: '8px', overflow: 'hidden' }}>
                         <img src={image} alt={`Existing preview ${index + 1}`} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                        <button type="button" onClick={() => setEventData((currentData) => ({ ...currentData, images: currentData.images.filter((_, imageIndex) => imageIndex !== index) }))} aria-label={`Remove existing image ${index + 1}`} style={{ position: 'absolute', top: 6, right: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, background: '#fff', border: '1px solid var(--lgray)', borderRadius: '50%', cursor: 'pointer' }}>
+                          <X size={14} />
+                        </button>
                       </div>
                     ))}
                   </div>

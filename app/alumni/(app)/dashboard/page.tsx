@@ -40,6 +40,7 @@ export default function AlumniDashboardPage() {
   const [error, setError] = useState('');
   const [currentTime, setCurrentTime] = useState<number | null>(null);
   const [welcomeVisible, setWelcomeVisible] = useState(true);
+  const [welcomeProgress, setWelcomeProgress] = useState(100);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setCurrentTime(Date.now()), 0);
@@ -48,8 +49,22 @@ export default function AlumniDashboardPage() {
 
   useEffect(() => {
     if (loading) return;
-    const timer = window.setTimeout(() => setWelcomeVisible(false), 3000);
-    return () => window.clearTimeout(timer);
+    setWelcomeProgress(100);
+    const startTime = Date.now();
+    const duration = 3000;
+    
+    const progressInterval = window.setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      setWelcomeProgress(remaining);
+      
+      if (elapsed >= duration) {
+        clearInterval(progressInterval);
+        setWelcomeVisible(false);
+      }
+    }, 16);
+    
+    return () => window.clearInterval(progressInterval);
   }, [loading]);
 
   useEffect(() => {
@@ -142,74 +157,208 @@ export default function AlumniDashboardPage() {
 
   if (loading) {
     return (
-      <div className="dashboard-loading">
-        <div className="loading-spinner" />
+      <div style={{ 
+        minHeight: '80vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        gap: '16px',
+        color: 'var(--navy)',
+        fontWeight: '600'
+      }}>
+        <div className="loading-spinner" style={{ width: '48px', height: '48px', borderWidth: '4px' }} />
         <span>Loading your dashboard...</span>
       </div>
     );
   }
 
   return (
-    <div className="animate-float-in">
+    <div className="dashboard-container" style={{ maxWidth: 1200, margin: '0 auto' }}>
+      {/* Welcome Banner */}
       {welcomeVisible && (
-        <div className="page-header page-header-dashboard welcome-temporary">
-          <div className="page-header-icon">
-            <CalendarDays size={32} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <h1 className="page-header-title">Welcome back</h1>
-            <p className="page-header-subtitle">
-              Explore events, announcements, documents, and more from the JOPESA alumni network
+        <div style={{
+          background: 'linear-gradient(135deg, var(--navy) 0%, var(--navy2) 50%, rgba(200,150,12,0.15) 100%)',
+          borderRadius: '20px',
+          padding: '32px 36px',
+          marginBottom: '32px',
+          color: '#fff',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 8px 32px rgba(0,43,107,0.2)',
+          transition: 'opacity 0.5s ease, transform 0.5s ease',
+          opacity: welcomeVisible ? 1 : 0,
+          transform: welcomeVisible ? 'translateY(0)' : 'translateY(-20px)'
+        }}>
+          <div style={{
+            position: 'absolute',
+            top: '-50%',
+            right: '-20%',
+            width: '400px',
+            height: '400px',
+            background: 'radial-gradient(circle, rgba(200,150,12,0.15) 0%, transparent 70%)',
+            borderRadius: '50%',
+            pointerEvents: 'none'
+          }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <h1 style={{ 
+              fontSize: 'clamp(24px, 4vw, 32px)', 
+              fontWeight: '800', 
+              marginBottom: '8px',
+              letterSpacing: '-0.5px'
+            }}>
+              Welcome to JOPESA Alumni
+            </h1>
+            <p style={{ 
+              fontSize: '15px', 
+              color: 'rgba(255,255,255,0.85)',
+              maxWidth: '600px',
+              lineHeight: 1.6
+            }}>
+              Your gateway to events, announcements, documents, and connections within the alumni network
             </p>
-            <div className="welcome-timeout-track" aria-label="Welcome message disappears in three seconds">
-              <div className="welcome-timeout-progress" />
+            <div style={{
+              marginTop: '20px',
+              height: '4px',
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${welcomeProgress}%`,
+                background: 'var(--gold2)',
+                borderRadius: '2px',
+                transition: 'width 0.016s linear'
+              }} />
             </div>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="alumni-card animate-float-in" style={{ marginBottom: 16, color: 'var(--err)' }}>
+        <div style={{ 
+          marginBottom: 24, 
+          padding: '16px 20px',
+          background: 'linear-gradient(135deg, rgba(185,28,28,0.08), rgba(185,28,28,0.04))',
+          border: '1px solid rgba(185,28,28,0.2)',
+          borderRadius: '14px',
+          color: 'var(--err)',
+          fontWeight: '600',
+          fontSize: '14px'
+        }}>
           {error}
         </div>
       )}
 
-      <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-1">
+      {/* Carousel */}
+      <section style={{ marginBottom: '36px' }}>
         <PhotoCarousel slides={carouselSlides} />
       </section>
 
       {!hasFullAccess && (
-        <div className="dashboard-locked-notice">
+        <div style={{
+          marginBottom: '32px',
+          padding: '20px 24px',
+          background: 'linear-gradient(135deg, rgba(200,150,12,0.1), rgba(200,150,12,0.05))',
+          border: '2px solid rgba(200,150,12,0.3)',
+          borderRadius: '16px',
+          color: 'var(--navy)',
+          fontWeight: '700',
+          fontSize: '15px',
+          textAlign: 'center',
+          boxShadow: '0 4px 16px rgba(200,150,12,0.15)'
+        }}>
           Pay at least one registration installment to view the rest of your dashboard.
         </div>
       )}
-      <div className={!hasFullAccess ? 'dashboard-locked-content' : undefined}>
-      <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-2">
-        <SectionHeader
-          title="Events"
-          subtitle="Upcoming and past events from the alumni network"
-          href="/alumni/events"
-        />
+      <div style={!hasFullAccess ? { filter: 'blur(4px)', userSelect: 'none', pointerEvents: 'none' } : undefined}>
+      
+      {/* Events Section */}
+      <section style={{ marginBottom: '36px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '20px'
+        }}>
+          <div>
+            <h2 style={{ 
+              fontSize: '24px', 
+              fontWeight: '800', 
+              color: 'var(--navy)', 
+              margin: 0 
+            }}>Events</h2>
+            <p style={{ 
+              fontSize: '14px', 
+              color: 'var(--gray)', 
+              margin: '4px 0 0' 
+            }}>Upcoming and past events from the alumni network</p>
+          </div>
+          <Link 
+            href="/alumni/events"
+            style={{
+              padding: '10px 20px',
+              borderRadius: '10px',
+              background: 'var(--navy)',
+              color: '#fff',
+              textDecoration: 'none',
+              fontWeight: '700',
+              fontSize: '14px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            View All
+          </Link>
+        </div>
         {dashboardEvents.length === 0 ? (
-          <div className="alumni-card">No events yet.</div>
+          <div style={{
+            padding: '48px 24px',
+            background: 'var(--off)',
+            borderRadius: '16px',
+            border: '2px dashed var(--lgray)',
+            textAlign: 'center',
+            color: 'var(--gray)'
+          }}>
+            No events yet.
+          </div>
         ) : (
-          <div className="alumni-grid-2">
-            {dashboardEvents.map((event, index) => {
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+            gap: '20px' 
+          }}>
+            {dashboardEvents.map((event) => {
               const cover = eventCover(event.id);
               const past = isPastEvent(event, currentTime);
               return (
                 <div
                   key={event.id}
-                  className={`alumni-card clickable animate-float-in animate-delay-${Math.min(index + 3, 5)}`}
                   onClick={() => router.push(`/alumni/events/${event.id}`)}
-                  style={{ padding: 0, overflow: 'hidden' }}
+                  style={{
+                    background: '#fff',
+                    borderRadius: '18px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(0,43,107,0.08)',
+                    boxShadow: '0 4px 20px rgba(0,43,107,0.08)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,43,107,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,43,107,0.08)';
+                  }}
                 >
                   {cover ? (
-                    <img src={cover} alt={event.title} style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+                    <img src={cover} alt={event.title} style={{ width: '100%', height: 180, objectFit: 'cover' }} />
                   ) : (
                     <div
                       style={{
-                        height: 140,
+                        height: 180,
                         background: 'linear-gradient(135deg, var(--navy), var(--navy2))',
                         display: 'flex',
                         alignItems: 'center',
@@ -217,31 +366,33 @@ export default function AlumniDashboardPage() {
                         color: 'var(--gold2)',
                       }}
                     >
-                      <CalendarDays size={32} />
+                      <CalendarDays size={48} />
                     </div>
                   )}
-                  <div style={{ padding: 16 }}>
+                  <div style={{ padding: '20px' }}>
                     <span style={{
                       display: 'inline-block',
-                      padding: '4px 9px',
-                      borderRadius: 999,
+                      padding: '6px 12px',
+                      borderRadius: '999',
                       background: past ? 'rgba(107, 114, 128, 0.12)' : 'rgba(16, 185, 129, 0.12)',
                       color: past ? '#6b7280' : '#047857',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      marginBottom: 8,
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      marginBottom: '12px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
                     }}>
                       {past ? 'Past' : 'Upcoming'}
                     </span>
-                    <div style={{ fontWeight: 800, color: 'var(--navy)', fontSize: 16, marginBottom: 8 }}>
+                    <div style={{ fontWeight: '800', color: 'var(--navy)', fontSize: '18px', marginBottom: '12', lineHeight: 1.3 }}>
                       {event.title}
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--gray)' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <CalendarDays size={14} /> {formatDateRange(event.startDate, event.endDate)}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px', color: 'var(--gray)' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <CalendarDays size={16} /> {formatDateRange(event.startDate, event.endDate)}
                       </span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <MapPin size={14} /> {event.location || 'Location TBA'}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <MapPin size={16} /> {event.location || 'Location TBA'}
                       </span>
                     </div>
                   </div>
@@ -252,25 +403,87 @@ export default function AlumniDashboardPage() {
         )}
       </section>
 
-      <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-3">
-        <SectionHeader title="Announcements" subtitle="Pinned updates and community news" href="/alumni/announcements" />
+      {/* Announcements Section */}
+      <section style={{ marginBottom: '36px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '20px'
+        }}>
+          <div>
+            <h2 style={{ 
+              fontSize: '24px', 
+              fontWeight: '800', 
+              color: 'var(--navy)', 
+              margin: 0 
+            }}>Announcements</h2>
+            <p style={{ 
+              fontSize: '14px', 
+              color: 'var(--gray)', 
+              margin: '4px 0 0' 
+            }}>Pinned updates and community news</p>
+          </div>
+          <Link 
+            href="/alumni/announcements"
+            style={{
+              padding: '10px 20px',
+              borderRadius: '10px',
+              background: 'var(--navy)',
+              color: '#fff',
+              textDecoration: 'none',
+              fontWeight: '700',
+              fontSize: '14px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            View All
+          </Link>
+        </div>
         {pinnedOrRecentNews.length === 0 ? (
-          <div className="alumni-card">No announcements yet.</div>
+          <div style={{
+            padding: '48px 24px',
+            background: 'var(--off)',
+            borderRadius: '16px',
+            border: '2px dashed var(--lgray)',
+            textAlign: 'center',
+            color: 'var(--gray)'
+          }}>
+            No announcements yet.
+          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {pinnedOrRecentNews.map((item, index) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {pinnedOrRecentNews.map((item) => (
               <div
                 key={item.id}
-                className={`alumni-card clickable animate-float-in animate-delay-${Math.min(index + 4, 5)}`}
                 onClick={() => router.push(`/alumni/announcements/${item.id}`)}
-                style={{ display: 'flex', gap: 14, alignItems: 'center' }}
+                style={{
+                  background: '#fff',
+                  padding: '20px 24px',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(0,43,107,0.08)',
+                  boxShadow: '0 2px 12px rgba(0,43,107,0.06)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  gap: '16px',
+                  alignItems: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                  e.currentTarget.style.borderColor = 'var(--navy)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateX(0)';
+                  e.currentTarget.style.borderColor = 'rgba(0,43,107,0.08)';
+                }}
               >
                 <div
                   style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 12,
-                    background: 'rgba(0,43,107,0.08)',
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, rgba(0,43,107,0.1), rgba(200,150,12,0.1))',
                     color: 'var(--navy)',
                     display: 'flex',
                     alignItems: 'center',
@@ -278,20 +491,29 @@ export default function AlumniDashboardPage() {
                     flexShrink: 0,
                   }}
                 >
-                  <Megaphone size={18} />
+                  <Megaphone size={24} />
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-                    <div style={{ fontWeight: 700, color: 'var(--navy)' }}>{item.title}</div>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '6', flexWrap: 'wrap' }}>
+                    <div style={{ fontWeight: '800', color: 'var(--navy)', fontSize: '16px' }}>{item.title}</div>
                     {item.isPinned && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase' }}>
+                      <span style={{ 
+                        fontSize: '11px', 
+                        fontWeight: '700', 
+                        color: 'var(--gold)', 
+                        textTransform: 'uppercase',
+                        padding: '4px 10px',
+                        background: 'rgba(200,150,12,0.15)',
+                        borderRadius: '999',
+                        letterSpacing: '0.5px'
+                      }}>
                         Pinned
                       </span>
                     )}
                   </div>
                   <div
                     style={{
-                      fontSize: 13,
+                      fontSize: '14px',
                       color: 'var(--gray)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -307,31 +529,104 @@ export default function AlumniDashboardPage() {
         )}
       </section>
 
-      <section style={{ marginBottom: 28 }} className="animate-float-in animate-delay-4">
-        <SectionHeader title="Documents" subtitle="Downloadable resources for alumni" href="/alumni/documents" />
+      {/* Documents Section */}
+      <section style={{ marginBottom: '36px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '20px'
+        }}>
+          <div>
+            <h2 style={{ 
+              fontSize: '24px', 
+              fontWeight: '800', 
+              color: 'var(--navy)', 
+              margin: 0 
+            }}>Documents</h2>
+            <p style={{ 
+              fontSize: '14px', 
+              color: 'var(--gray)', 
+              margin: '4px 0 0' 
+            }}>Downloadable resources for alumni</p>
+          </div>
+          <Link 
+            href="/alumni/documents"
+            style={{
+              padding: '10px 20px',
+              borderRadius: '10px',
+              background: 'var(--navy)',
+              color: '#fff',
+              textDecoration: 'none',
+              fontWeight: '700',
+              fontSize: '14px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            View All
+          </Link>
+        </div>
         {documents.length === 0 ? (
-          <div className="alumni-card">No documents available yet.</div>
+          <div style={{
+            padding: '48px 24px',
+            background: 'var(--off)',
+            borderRadius: '16px',
+            border: '2px dashed var(--lgray)',
+            textAlign: 'center',
+            color: 'var(--gray)'
+          }}>
+            No documents available yet.
+          </div>
         ) : (
-          <div className="alumni-grid-3">
-            {documents.slice(0, 6).map((doc, index) => (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+            gap: '16px' 
+          }}>
+            {documents.slice(0, 6).map((doc) => (
               <div 
                 key={doc.id} 
-                className={`alumni-card animate-float-in animate-delay-${Math.min(index + 5, 5)}`}
-                style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+                style={{
+                  background: '#fff',
+                  padding: '20px',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(0,43,107,0.08)',
+                  boxShadow: '0 2px 12px rgba(0,43,107,0.06)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,43,107,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,43,107,0.06)';
+                }}
               >
                 <div
-                  className="clickable"
                   onClick={() => router.push(`/alumni/documents/${doc.id}`)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: 'var(--navy)' }}>
-                    <FileText size={16} />
-                    <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '10px', 
+                    marginBottom: '12', 
+                    color: 'var(--navy)',
+                    padding: '8px 12px',
+                    background: 'var(--off)',
+                    borderRadius: '10px'
+                  }}>
+                    <FileText size={18} />
+                    <span style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--gray)', letterSpacing: '0.5px' }}>
                       {doc.type || doc.fileType || 'File'}
                     </span>
                   </div>
-                  <div style={{ fontWeight: 700, color: 'var(--navy)', marginBottom: 4 }}>{doc.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--gray)' }}>{doc.category || 'General'}</div>
+                  <div style={{ fontWeight: '700', color: 'var(--navy)', fontSize: '15px', marginBottom: '6', lineHeight: 1.4 }}>{doc.title}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--gray)' }}>{doc.category || 'General'}</div>
                 </div>
                 <button
                   onClick={() => downloadFile(doc.fileUrl, doc.title, doc.fileType || doc.type)}
@@ -340,18 +635,29 @@ export default function AlumniDashboardPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 6,
-                    padding: '8px 10px',
-                    borderRadius: 8,
+                    gap: '8px',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
                     border: '1px solid var(--lgray)',
                     background: 'var(--off)',
                     color: 'var(--navy)',
-                    fontWeight: 700,
-                    fontSize: 12,
+                    fontWeight: '700',
+                    fontSize: '13px',
                     cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--navy)';
+                    e.currentTarget.style.color = '#fff';
+                    e.currentTarget.style.borderColor = 'var(--navy)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--off)';
+                    e.currentTarget.style.color = 'var(--navy)';
+                    e.currentTarget.style.borderColor = 'var(--lgray)';
                   }}
                 >
-                  <Download size={14} /> Download
+                  <Download size={16} /> Download
                 </button>
               </div>
             ))}
@@ -359,29 +665,139 @@ export default function AlumniDashboardPage() {
         )}
       </section>
 
-      <section style={{ marginBottom: 12 }} className="animate-float-in animate-delay-5">
-        <SectionHeader title="Explore more" subtitle="Everything the alumni platform offers" />
-        <div className="alumni-grid-3">
-          <Link href="/alumni/gallery" className="alumni-card clickable animate-float-in animate-delay-1" style={{ textDecoration: 'none', display: 'block' }}>
-            <Images size={22} color="var(--navy)" />
-            <div style={{ fontWeight: 800, color: 'var(--navy)', marginTop: 10 }}>Photo Gallery</div>
-            <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 4 }}>
+      {/* Quick Links Section */}
+      <section style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <h2 style={{ 
+            fontSize: '24px', 
+            fontWeight: '800', 
+            color: 'var(--navy)', 
+            margin: 0 
+          }}>Explore More</h2>
+          <p style={{ 
+            fontSize: '14px', 
+            color: 'var(--gray)', 
+            margin: '4px 0 0' 
+          }}>Everything the alumni platform offers</p>
+        </div>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+          gap: '16px' 
+        }}>
+          <Link 
+            href="/alumni/gallery" 
+            style={{
+              textDecoration: 'none',
+              display: 'block',
+              background: 'linear-gradient(135deg, rgba(0,43,107,0.05), #fff)',
+              padding: '28px 24px',
+              borderRadius: '18px',
+              border: '1px solid rgba(0,43,107,0.1)',
+              boxShadow: '0 2px 12px rgba(0,43,107,0.06)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,43,107,0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,43,107,0.06)';
+            }}
+          >
+            <div style={{ 
+              width: '56px', 
+              height: '56px', 
+              borderRadius: '14px', 
+              background: 'linear-gradient(135deg, var(--navy), var(--navy2))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <Images size={28} color="var(--gold2)" />
+            </div>
+            <div style={{ fontWeight: '800', color: 'var(--navy)', fontSize: '18px', marginBottom: '8' }}>Photo Gallery</div>
+            <div style={{ fontSize: '14px', color: 'var(--gray)', lineHeight: 1.5 }}>
               {photos.length > 0
                 ? `${photos.length} photo${photos.length === 1 ? '' : 's'} from admin uploads`
                 : 'Browse and download event photos'}
             </div>
           </Link>
-          <Link href="/alumni/batch-finder" className="alumni-card clickable animate-float-in animate-delay-2" style={{ textDecoration: 'none', display: 'block' }}>
-            <Search size={22} color="var(--navy)" />
-            <div style={{ fontWeight: 800, color: 'var(--navy)', marginTop: 10 }}>Batch Finder</div>
-            <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 4 }}>
+          <Link 
+            href="/alumni/batch-finder" 
+            style={{
+              textDecoration: 'none',
+              display: 'block',
+              background: 'linear-gradient(135deg, rgba(200,150,12,0.05), #fff)',
+              padding: '28px 24px',
+              borderRadius: '18px',
+              border: '1px solid rgba(200,150,12,0.1)',
+              boxShadow: '0 2px 12px rgba(200,150,12,0.06)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(200,150,12,0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 12px rgba(200,150,12,0.06)';
+            }}
+          >
+            <div style={{ 
+              width: '56px', 
+              height: '56px', 
+              borderRadius: '14px', 
+              background: 'linear-gradient(135deg, var(--gold), var(--gold2))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <Search size={28} color="var(--navy)" />
+            </div>
+            <div style={{ fontWeight: '800', color: 'var(--navy)', fontSize: '18px', marginBottom: '8' }}>Batch Finder</div>
+            <div style={{ fontSize: '14px', color: 'var(--gray)', lineHeight: 1.5 }}>
               Discover your batch and graduation year
             </div>
           </Link>
-          <Link href="/alumni/chapters" className="alumni-card clickable animate-float-in animate-delay-3" style={{ textDecoration: 'none', display: 'block' }}>
-            <Building2 size={22} color="var(--navy)" />
-            <div style={{ fontWeight: 800, color: 'var(--navy)', marginTop: 10 }}>Chapters</div>
-            <div style={{ fontSize: 13, color: 'var(--gray)', marginTop: 4 }}>
+          <Link 
+            href="/alumni/chapters" 
+            style={{
+              textDecoration: 'none',
+              display: 'block',
+              background: 'linear-gradient(135deg, rgba(4,120,87,0.05), #fff)',
+              padding: '28px 24px',
+              borderRadius: '18px',
+              border: '1px solid rgba(4,120,87,0.1)',
+              boxShadow: '0 2px 12px rgba(4,120,87,0.06)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(4,120,87,0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 12px rgba(4,120,87,0.06)';
+            }}
+          >
+            <div style={{ 
+              width: '56px', 
+              height: '56px', 
+              borderRadius: '14px', 
+              background: 'linear-gradient(135deg, #047857, #059669)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <Building2 size={28} color="#fff" />
+            </div>
+            <div style={{ fontWeight: '800', color: 'var(--navy)', fontSize: '18px', marginBottom: '8' }}>Chapters</div>
+            <div style={{ fontSize: '14px', color: 'var(--gray)', lineHeight: 1.5 }}>
               {branches.length > 0
                 ? `${branches.length} chapter${branches.length === 1 ? '' : 's'} available`
                 : 'Find your regional chapter'}

@@ -21,12 +21,17 @@ interface PhotoCarouselProps {
 export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     if (slides.length <= 1) return;
     const timer = window.setInterval(() => {
-      setIndex((prev) => (prev + 1) % slides.length);
-    }, 4500);
+      setIsAnimating(true);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % slides.length);
+        setTimeout(() => setIsAnimating(false), 300);
+      }, 200);
+    }, 2000);
     return () => window.clearInterval(timer);
   }, [slides.length]);
 
@@ -79,8 +84,12 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
               height: '100%',
               objectFit: 'cover',
               opacity: i === activeIndex ? 1 : 0,
-              transform: i === activeIndex ? 'scale(1)' : 'scale(1.05)',
-              transition: 'opacity 0.6s ease, transform 6s ease',
+              transform: i === activeIndex 
+                ? (isAnimating ? 'scale(1.02)' : 'scale(1)') 
+                : 'scale(1.1)',
+              transition: i === activeIndex 
+                ? 'opacity 0.5s ease, transform 2s ease' 
+                : 'opacity 0.5s ease, transform 2s ease',
             }}
           />
         ) : (
@@ -95,7 +104,7 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
               background: 'linear-gradient(135deg, var(--navy), var(--navy2))',
               color: 'var(--gold2)',
               opacity: i === activeIndex ? 1 : 0,
-              transition: 'opacity 0.6s ease',
+              transition: 'opacity 0.5s ease',
             }}
           >
             <CalendarDays size={64} />
@@ -177,8 +186,17 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
               justifyContent: 'center',
               cursor: 'pointer',
               zIndex: 3,
+              transition: 'all 0.2s ease',
             }}
             aria-label="Previous photo"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,1)';
+              e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.9)';
+              e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+            }}
           >
             <ChevronLeft size={18} />
           </button>
@@ -203,8 +221,17 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
               justifyContent: 'center',
               cursor: 'pointer',
               zIndex: 3,
+              transition: 'all 0.2s ease',
             }}
             aria-label="Next photo"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,1)';
+              e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.9)';
+              e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+            }}
           >
             <ChevronRight size={18} />
           </button>
@@ -234,7 +261,7 @@ export default function PhotoCarousel({ slides }: PhotoCarouselProps) {
                   border: 'none',
                   background: i === activeIndex ? 'var(--gold2)' : 'rgba(255,255,255,0.55)',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
                 aria-label={`Go to slide ${i + 1}`}
               />

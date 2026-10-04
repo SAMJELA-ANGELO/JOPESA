@@ -37,6 +37,7 @@ export default function AlumniRegisterPage() {
   const [branchOptions, setBranchOptions] = useState<Array<{ id: string; name?: string }>>([]);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -74,6 +75,7 @@ export default function AlumniRegisterPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     try {
       const response = await fetch(`${apiBaseUrl}/alumni`, {
@@ -107,6 +109,8 @@ export default function AlumniRegisterPage() {
     } catch (err) {
       console.error('Alumni registration failed:', err);
       setError(err instanceof Error && err.message ? err.message : 'Registration failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -120,82 +124,321 @@ export default function AlumniRegisterPage() {
       footerLabel="Sign in"
       error={error}
       onSubmit={handleSubmit}
+      isSubmitting={isSubmitting}
     >
-      <div className="fg" style={{ marginBottom: '16px' }}>
-        <label>First Name</label>
+      <div style={{ marginBottom: '4px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '13px', 
+          fontWeight: '700', 
+          color: 'var(--navy)', 
+          marginBottom: '6px' 
+        }}>First Name</label>
         <input
           type="text"
           value={firstName}
           onChange={(event) => setFirstName(event.target.value)}
           placeholder="Enter your first name"
           required
+          style={{
+            width: '100%',
+            padding: '14px 16px',
+            border: '2px solid var(--lgray)',
+            borderRadius: '12px',
+            fontSize: '15px',
+            fontFamily: 'inherit',
+            color: 'var(--dark)',
+            background: '#fff',
+            outline: 'none',
+            transition: 'border-color 0.2s, box-shadow 0.2s'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'var(--navy)';
+            e.target.style.boxShadow = '0 0 0 3px rgba(0,43,107,0.08)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'var(--lgray)';
+            e.target.style.boxShadow = 'none';
+          }}
         />
       </div>
 
-      <div className="fg" style={{ marginBottom: '16px' }}>
-        <label>Last Name</label>
+      <div style={{ marginBottom: '4px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '13px', 
+          fontWeight: '700', 
+          color: 'var(--navy)', 
+          marginBottom: '6px' 
+        }}>Last Name</label>
         <input
           type="text"
           value={lastName}
           onChange={(event) => setLastName(event.target.value)}
           placeholder="Enter your last name"
           required
+          style={{
+            width: '100%',
+            padding: '14px 16px',
+            border: '2px solid var(--lgray)',
+            borderRadius: '12px',
+            fontSize: '15px',
+            fontFamily: 'inherit',
+            color: 'var(--dark)',
+            background: '#fff',
+            outline: 'none',
+            transition: 'border-color 0.2s, box-shadow 0.2s'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'var(--navy)';
+            e.target.style.boxShadow = '0 0 0 3px rgba(0,43,107,0.08)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'var(--lgray)';
+            e.target.style.boxShadow = 'none';
+          }}
         />
       </div>
 
-      <div className="fg" style={{ marginBottom: '16px' }}>
-        <label>Email Address</label>
+      <div style={{ marginBottom: '4px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '13px', 
+          fontWeight: '700', 
+          color: 'var(--navy)', 
+          marginBottom: '6px' 
+        }}>Email Address</label>
         <input
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="Enter your email"
           required
+          style={{
+            width: '100%',
+            padding: '14px 16px',
+            border: '2px solid var(--lgray)',
+            borderRadius: '12px',
+            fontSize: '15px',
+            fontFamily: 'inherit',
+            color: 'var(--dark)',
+            background: '#fff',
+            outline: 'none',
+            transition: 'border-color 0.2s, box-shadow 0.2s'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'var(--navy)';
+            e.target.style.boxShadow = '0 0 0 3px rgba(0,43,107,0.08)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'var(--lgray)';
+            e.target.style.boxShadow = 'none';
+          }}
         />
       </div>
 
-      <div className="fg" style={{ marginBottom: '16px' }}>
-        <label>Phone Number</label>
+      <div style={{ marginBottom: '4px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '13px', 
+          fontWeight: '700', 
+          color: 'var(--navy)', 
+          marginBottom: '6px' 
+        }}>Phone Number <span style={{ color: 'var(--gray)', fontWeight: '400' }}>(Optional)</span></label>
         <input
           type="tel"
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
           placeholder="Optional phone number"
+          style={{
+            width: '100%',
+            padding: '14px 16px',
+            border: '2px solid var(--lgray)',
+            borderRadius: '12px',
+            fontSize: '15px',
+            fontFamily: 'inherit',
+            color: 'var(--dark)',
+            background: '#fff',
+            outline: 'none',
+            transition: 'border-color 0.2s, box-shadow 0.2s'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'var(--navy)';
+            e.target.style.boxShadow = '0 0 0 3px rgba(0,43,107,0.08)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'var(--lgray)';
+            e.target.style.boxShadow = 'none';
+          }}
         />
       </div>
 
-      <div className="fg" style={{ marginBottom: '16px' }}>
-        <label>Batch</label>
-        <select aria-label="Batch" value={batchId} onChange={(event) => setBatchId(event.target.value)} required>
-          <option value="" disabled>Select a batch</option>
-          {batchOptions.map((batch) => (
-            <option key={batch.id} value={batch.id}>{batch.name || `Batch ${batch.year ?? ''}`}</option>
-          ))}
-        </select>
+      <div style={{ marginBottom: '4px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '13px', 
+          fontWeight: '700', 
+          color: 'var(--navy)', 
+          marginBottom: '6px' 
+        }}>Batch</label>
+        <div style={{ position: 'relative' }}>
+          <select 
+            aria-label="Batch" 
+            value={batchId} 
+            onChange={(event) => setBatchId(event.target.value)} 
+            required
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              border: '2px solid var(--lgray)',
+              borderRadius: '12px',
+              fontSize: '15px',
+              fontFamily: 'inherit',
+              color: 'var(--dark)',
+              background: '#fff',
+              outline: 'none',
+              transition: 'border-color 0.2s, box-shadow 0.2s',
+              appearance: 'none',
+              cursor: 'pointer'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--navy)';
+              e.target.style.boxShadow = '0 0 0 3px rgba(0,43,107,0.08)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'var(--lgray)';
+              e.target.style.boxShadow = 'none';
+            }}
+          >
+            <option value="" disabled>Select a batch</option>
+            {batchOptions.map((batch) => (
+              <option key={batch.id} value={batch.id}>{batch.name || `Batch ${batch.year ?? ''}`}</option>
+            ))}
+          </select>
+          <div style={{
+            position: 'absolute',
+            right: '14px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            color: 'var(--gray)',
+            fontSize: '12px'
+          }}>▼</div>
+        </div>
       </div>
 
-      <div className="fg" style={{ marginBottom: '16px' }}>
-        <label>Branch</label>
-        <select aria-label="Branch" value={branchId} onChange={(event) => setBranchId(event.target.value)} required>
-          <option value="" disabled>Select a branch</option>
-          {branchOptions.map((branch) => (
-            <option key={branch.id} value={branch.id}>{branch.name}</option>
-          ))}
-        </select>
+      <div style={{ marginBottom: '4px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '13px', 
+          fontWeight: '700', 
+          color: 'var(--navy)', 
+          marginBottom: '6px' 
+        }}>Branch</label>
+        <div style={{ position: 'relative' }}>
+          <select 
+            aria-label="Branch" 
+            value={branchId} 
+            onChange={(event) => setBranchId(event.target.value)} 
+            required
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              border: '2px solid var(--lgray)',
+              borderRadius: '12px',
+              fontSize: '15px',
+              fontFamily: 'inherit',
+              color: 'var(--dark)',
+              background: '#fff',
+              outline: 'none',
+              transition: 'border-color 0.2s, box-shadow 0.2s',
+              appearance: 'none',
+              cursor: 'pointer'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--navy)';
+              e.target.style.boxShadow = '0 0 0 3px rgba(0,43,107,0.08)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'var(--lgray)';
+              e.target.style.boxShadow = 'none';
+            }}
+          >
+            <option value="" disabled>Select a branch</option>
+            {branchOptions.map((branch) => (
+              <option key={branch.id} value={branch.id}>{branch.name}</option>
+            ))}
+          </select>
+          <div style={{
+            position: 'absolute',
+            right: '14px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            color: 'var(--gray)',
+            fontSize: '12px'
+          }}>▼</div>
+        </div>
       </div>
 
-      <div className="fg" style={{ marginBottom: '24px' }}>
-        <label>Password</label>
-        <input
-          type={showPassword ? 'text' : 'password'}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Create a password"
-          required
-        />
-        <Button isIconOnly type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onPress={() => setShowPassword(!showPassword)}>
-          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-        </Button>
+      <div style={{ marginBottom: '4px' }}>
+        <label style={{ 
+          display: 'block', 
+          fontSize: '13px', 
+          fontWeight: '700', 
+          color: 'var(--navy)', 
+          marginBottom: '6px' 
+        }}>Password</label>
+        <div style={{ position: 'relative' }}>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Create a password"
+            required
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              paddingRight: '48px',
+              border: '2px solid var(--lgray)',
+              borderRadius: '12px',
+              fontSize: '15px',
+              fontFamily: 'inherit',
+              color: 'var(--dark)',
+              background: '#fff',
+              outline: 'none',
+              transition: 'border-color 0.2s, box-shadow 0.2s'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--navy)';
+              e.target.style.boxShadow = '0 0 0 3px rgba(0,43,107,0.08)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'var(--lgray)';
+              e.target.style.boxShadow = 'none';
+            }}
+          />
+          <Button 
+            isIconOnly 
+            type="button" 
+            aria-label={showPassword ? 'Hide password' : 'Show password'} 
+            onPress={() => setShowPassword(!showPassword)}
+            style={{
+              position: 'absolute',
+              right: '8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'transparent',
+              border: 'none',
+              padding: '8px',
+              cursor: 'pointer',
+              color: 'var(--gray)',
+              transition: 'color 0.15s'
+            }}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </Button>
+        </div>
       </div>
     </AuthCard>
   );

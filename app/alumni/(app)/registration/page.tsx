@@ -124,154 +124,544 @@ export default function AlumniRegistrationPage() {
   ).sort((a, b) => new Date(b.paymentDate || b.createdAt || '').getTime() - new Date(a.paymentDate || a.createdAt || '').getTime());
 
   if (loading) {
-    return <div className="alumni-card" style={{ padding: 32 }}>Loading registration details...</div>;
+    return (
+      <div style={{ 
+        minHeight: '80vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center',
+        gap: '16px',
+        color: 'var(--navy)',
+        fontWeight: '600'
+      }}>
+        <div className="loading-spinner" style={{ width: '48px', height: '48px', borderWidth: '4px' }} />
+        <span>Loading registration details...</span>
+      </div>
+    );
   }
 
   return (
-    <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-      <div className="page-header">
-        <div className="page-header-icon"><BadgeCheck size={30} /></div>
-        <div>
-          <h1 className="page-header-title">Alumni Registration</h1>
-          <p className="page-header-subtitle">Pay your registration fee, see your payment history, and follow your batch&apos;s registration progress.</p>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%)',
+        borderRadius: '20px',
+        padding: '36px 32px',
+        marginBottom: '32px',
+        color: '#fff',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,43,107,0.2)'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-20%',
+          width: '400px',
+          height: '400px',
+          background: 'radial-gradient(circle, rgba(200,150,12,0.15) 0%, transparent 70%)',
+          borderRadius: '50%',
+          pointerEvents: 'none'
+        }} />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{
+            width: '72px',
+            height: '72px',
+            borderRadius: '18px',
+            background: 'rgba(200,150,12,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <BadgeCheck size={36} color="var(--gold2)" />
+          </div>
+          <div>
+            <h1 style={{ 
+              fontSize: 'clamp(24px, 4vw, 32px)', 
+              fontWeight: '800', 
+              marginBottom: '8px',
+              letterSpacing: '-0.5px'
+            }}>
+              Alumni Registration
+            </h1>
+            <p style={{ 
+              fontSize: '15px', 
+              color: 'rgba(255,255,255,0.85)',
+              maxWidth: '500px',
+              lineHeight: 1.6
+            }}>
+              Complete your registration to unlock full access to the alumni portal
+            </p>
+          </div>
         </div>
       </div>
 
-      {notice && <div className="alumni-card" style={{ marginBottom: 18, color: overview?.hasPaidRegistration ? '#047857' : 'var(--navy)' }}>{notice}</div>}
-      {error && <div className="alumni-card" role="alert" style={{ marginBottom: 18, color: 'var(--err)' }}>{error}</div>}
+      {notice && (
+        <div 
+          style={{ 
+            marginBottom: 24, 
+            padding: '18px 22px',
+            color: overview?.hasPaidRegistration ? '#047857' : 'var(--navy)',
+            background: overview?.hasPaidRegistration 
+              ? 'linear-gradient(135deg, rgba(4,120,87,0.1), rgba(4,120,87,0.05))' 
+              : 'linear-gradient(135deg, rgba(0,43,107,0.1), rgba(200,150,12,0.05))',
+            border: overview?.hasPaidRegistration 
+              ? '2px solid rgba(4,120,87,0.25)' 
+              : '2px solid rgba(200,150,12,0.25)',
+            borderRadius: '16px',
+            fontWeight: '600',
+            fontSize: '15px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}
+        >
+          {overview?.hasPaidRegistration ? <BadgeCheck size={22} /> : <LockKeyhole size={22} />}
+          {notice}
+        </div>
+      )}
+      {error && (
+        <div 
+          style={{ 
+            marginBottom: 24, 
+            padding: '18px 22px',
+            color: 'var(--err)',
+            background: 'linear-gradient(135deg, rgba(185,28,28,0.1), rgba(185,28,28,0.05))',
+            border: '2px solid rgba(185,28,28,0.25)',
+            borderRadius: '16px',
+            fontWeight: '600',
+            fontSize: '15px'
+          }}
+        >
+          {error}
+        </div>
+      )}
 
-      <div className="alumni-grid-2" style={{ alignItems: 'start', marginBottom: 26 }}>
-        <section className="alumni-card" style={{ padding: 22 }}>
-          <h2 style={{ margin: '0 0 14px', color: 'var(--navy)' }}>Your registration status</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            {overview?.hasPaidRegistration
-              ? <BadgeCheck size={22} color="#047857" />
-              : <LockKeyhole size={22} color="#b45309" />}
-            <strong style={{ color: overview?.hasPaidRegistration ? '#047857' : '#b45309' }}>
-              {overview?.hasPaidRegistration ? 'Registered — portal access unlocked' : 'Registration payment required'}
-            </strong>
+      {/* Status Card */}
+      <div style={{ 
+        background: overview?.hasPaidRegistration 
+          ? 'linear-gradient(135deg, rgba(4,120,87,0.08), #fff)' 
+          : 'linear-gradient(135deg, rgba(200,150,12,0.08), #fff)',
+        padding: '32px',
+        borderRadius: '20px',
+        border: overview?.hasPaidRegistration 
+          ? '2px solid rgba(4,120,87,0.2)' 
+          : '2px solid rgba(200,150,12,0.2)',
+        marginBottom: '32px',
+        boxShadow: '0 4px 20px rgba(0,43,107,0.08)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: overview?.hasPaidRegistration 
+              ? 'rgba(4,120,87,0.15)' 
+              : 'rgba(200,150,12,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {overview?.hasPaidRegistration 
+              ? <BadgeCheck size={24} color="#047857" />
+              : <LockKeyhole size={24} color="#b45309" />
+            }
           </div>
-          <div style={{ color: 'var(--gray)', fontSize: 14, marginBottom: 6 }}>
-            Batch: <strong style={{ color: 'var(--navy)' }}>{overview?.batch?.name || (overview?.batch?.year ? `Batch ${overview.batch.year}` : 'Not assigned')}</strong>
+          <div>
+            <h2 style={{ 
+              margin: '0 0 8px', 
+              color: overview?.hasPaidRegistration ? '#047857' : '#b45309',
+              fontSize: '22px',
+              fontWeight: '800'
+            }}>
+              {overview?.hasPaidRegistration ? 'Registration Complete' : 'Registration Pending'}
+            </h2>
+            <p style={{ 
+              margin: 0,
+              color: 'var(--gray)',
+              fontSize: '15px'
+            }}>
+              {overview?.hasPaidRegistration 
+                ? 'Your portal access is fully unlocked' 
+                : 'Complete payment to unlock full access'}
+            </p>
           </div>
-          <div style={{ color: 'var(--gray)', fontSize: 14 }}>Confirmed registration payments: <strong style={{ color: 'var(--navy)' }}>{totalPaid.toLocaleString()} XAF</strong></div>
-        </section>
+        </div>
+        
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: '20px',
+          paddingTop: '16px',
+          borderTop: '1px solid var(--lgray)'
+        }}>
+          <div>
+            <div style={{ fontSize: '11px', color: 'var(--gray)', fontWeight: '700', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Batch</div>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--navy)' }}>
+              {overview?.batch?.name || (overview?.batch?.year ? `Batch ${overview.batch.year}` : 'Not assigned')}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: 'var(--gray)', fontWeight: '700', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Paid</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--navy)' }}>
+              {totalPaid.toLocaleString()} XAF
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: 'var(--gray)', fontWeight: '700', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</div>
+            <div style={{ 
+              fontSize: '14px', 
+              fontWeight: '700', 
+              color: overview?.hasPaidRegistration ? '#047857' : '#b45309' 
+            }}>
+              {overview?.hasPaidRegistration ? 'Active' : 'Pending'}
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <section className="alumni-card" style={{ padding: 22 }}>
-          <h2 style={{ margin: '0 0 8px', color: 'var(--navy)' }}>Registration fee</h2>
-          {!overview?.contributions.length ? (
-            <p style={{ color: 'var(--gray)', marginBottom: 0 }}>No registration fee is currently available. Please check back later.</p>
-          ) : (
-            <>
-              <label htmlFor="registration-contribution" style={{ display: 'block', margin: '12px 0 6px', fontSize: 13, fontWeight: 700 }}>Fee</label>
-              <select
-                id="registration-contribution"
-                value={selectedContributionId}
-                onChange={(event) => {
-                  setSelectedContributionId(event.target.value);
-                  setSelectedInstallmentId('');
-                }}
-                style={{ width: '100%', padding: 11, border: '1px solid var(--lgray)', borderRadius: 8, marginBottom: 12 }}
-              >
-                {overview.contributions.map((contribution) => (
-                  <option key={contribution.id} value={contribution.id}>{contribution.title} ({contribution.status?.toLowerCase()})</option>
-                ))}
-              </select>
-              {selectedContribution?.description && <p style={{ color: 'var(--gray)', fontSize: 13 }}>{selectedContribution.description}</p>}
-              {!installments.length ? (
-                <p style={{ color: '#b45309', fontSize: 13 }}>Installments have not been configured for this registration fee yet. Please contact an administrator.</p>
-              ) : (
-                <>
-                  <label htmlFor="registration-installment" style={{ display: 'block', margin: '10px 0 6px', fontSize: 13, fontWeight: 700 }}>Installment</label>
-                  <select
-                    id="registration-installment"
-                    value={selectedInstallment?.id || ''}
-                    onChange={(event) => setSelectedInstallmentId(event.target.value)}
-                    disabled={payableInstallments.length === 0 || selectedContribution?.status !== 'ACTIVE'}
-                    style={{ width: '100%', padding: 11, border: '1px solid var(--lgray)', borderRadius: 8, marginBottom: 12 }}
-                  >
-                    {payableInstallments.length ? payableInstallments.map((installment) => (
-                      <option key={installment.id} value={installment.id}>
-                        {installment.label} — {Number(installment.amount).toLocaleString()} XAF
-                      </option>
-                    )) : <option value="">All installments paid</option>}
-                  </select>
-                  <label htmlFor="registration-phone" style={{ display: 'block', margin: '10px 0 6px', fontSize: 13, fontWeight: 700 }}>Mobile money phone</label>
+      {/* Payment Form */}
+      <div style={{ 
+        background: '#fff',
+        padding: '32px',
+        borderRadius: '20px',
+        border: '1px solid rgba(0,43,107,0.08)',
+        boxShadow: '0 4px 20px rgba(0,43,107,0.08)',
+        marginBottom: '32px'
+      }}>
+        <h2 style={{ margin: '0 0 24px', color: 'var(--navy)', fontSize: '22px', fontWeight: '800' }}>
+          Make a Payment
+        </h2>
+        {!overview?.contributions.length ? (
+          <div style={{
+            padding: '48px 24px',
+            background: 'var(--off)',
+            borderRadius: '16px',
+            border: '2px dashed var(--lgray)',
+            textAlign: 'center',
+            color: 'var(--gray)'
+          }}>
+            <p style={{ marginBottom: 0, fontSize: '15px' }}>No registration fee is currently available. Please check back later.</p>
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '10px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>
+                Select Fee
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={selectedContributionId}
+                  onChange={(event) => {
+                    setSelectedContributionId(event.target.value);
+                    setSelectedInstallmentId('');
+                  }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '16px 18px', 
+                    border: '2px solid var(--lgray)', 
+                    borderRadius: '14px', 
+                    fontSize: '16px',
+                    background: '#fff',
+                    outline: 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    appearance: 'none',
+                    cursor: 'pointer'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--navy)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(0,43,107,0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--lgray)';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  {overview.contributions.map((contribution) => (
+                    <option key={contribution.id} value={contribution.id}>{contribution.title} ({contribution.status?.toLowerCase()})</option>
+                  ))}
+                </select>
+                <div style={{
+                  position: 'absolute',
+                  right: '18px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  pointerEvents: 'none',
+                  color: 'var(--gray)',
+                  fontSize: '14px'
+                }}>▼</div>
+              </div>
+              {selectedContribution?.description && (
+                <p style={{ color: 'var(--gray)', fontSize: '15px', marginTop: '12px', lineHeight: 1.6, padding: '16px', background: 'var(--off)', borderRadius: '12px' }}>
+                  {selectedContribution.description}
+                </p>
+              )}
+            </div>
+
+            {!installments.length ? (
+              <div style={{
+                padding: '20px 24px',
+                background: 'rgba(180,83,9,0.08)',
+                borderRadius: '14px',
+                border: '1px solid rgba(180,83,9,0.2)',
+                color: '#b45309',
+                fontSize: '15px',
+                fontWeight: '600'
+              }}>
+                Installments have not been configured for this registration fee yet. Please contact an administrator.
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ display: 'block', marginBottom: '10px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>
+                    Select Installment
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <select
+                      value={selectedInstallment?.id || ''}
+                      onChange={(event) => setSelectedInstallmentId(event.target.value)}
+                      disabled={payableInstallments.length === 0 || selectedContribution?.status !== 'ACTIVE'}
+                      style={{ 
+                        width: '100%', 
+                        padding: '16px 18px', 
+                        border: '2px solid var(--lgray)', 
+                        borderRadius: '14px', 
+                        fontSize: '16px',
+                        background: '#fff',
+                        outline: 'none',
+                        transition: 'border-color 0.2s, box-shadow 0.2s',
+                        appearance: 'none',
+                        cursor: 'pointer'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = 'var(--navy)';
+                        e.target.style.boxShadow = '0 0 0 4px rgba(0,43,107,0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = 'var(--lgray)';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    >
+                      {payableInstallments.length ? payableInstallments.map((installment) => (
+                        <option key={installment.id} value={installment.id}>
+                          {installment.label} — {Number(installment.amount).toLocaleString()} XAF
+                        </option>
+                      )) : <option value="">All installments paid</option>}
+                    </select>
+                    <div style={{
+                      position: 'absolute',
+                      right: '18px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                      color: 'var(--gray)',
+                      fontSize: '14px'
+                    }}>▼</div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ display: 'block', marginBottom: '10px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>
+                    Mobile Money Phone
+                  </label>
                   <input
-                    id="registration-phone"
                     type="tel"
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
                     placeholder="6XXXXXXXX"
-                    style={{ width: '100%', padding: 11, border: '1px solid var(--lgray)', borderRadius: 8, marginBottom: 12 }}
+                    style={{ 
+                      width: '100%', 
+                      padding: '16px 18px', 
+                      border: '2px solid var(--lgray)', 
+                      borderRadius: '14px', 
+                      fontSize: '16px',
+                      background: '#fff',
+                      outline: 'none',
+                      transition: 'border-color 0.2s, box-shadow 0.2s'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'var(--navy)';
+                      e.target.style.boxShadow = '0 0 0 4px rgba(0,43,107,0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'var(--lgray)';
+                      e.target.style.boxShadow = 'none';
+                    }}
                   />
-                  <button
-                    type="button"
-                    className="btn btn-navy"
-                    onClick={initiatePayment}
-                    disabled={submitting || !selectedInstallment || selectedContribution?.status !== 'ACTIVE'}
-                    style={{ width: '100%', justifyContent: 'center' }}
-                  >
-                    {submitting ? <RefreshCw size={16} /> : <CreditCard size={16} />}
-                    {submitting ? 'Starting payment...' : selectedInstallment ? `Pay ${Number(selectedInstallment.amount).toLocaleString()} XAF` : 'No installment due'}
-                  </button>
-                  <p style={{ color: 'var(--gray)', fontSize: 12, marginBottom: 0, marginTop: 10 }}>
-                    Access unlocks once the payment provider confirms at least one installment.
-                  </p>
-                </>
-              )}
-            </>
-          )}
-        </section>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={initiatePayment}
+                  disabled={submitting || !selectedInstallment || selectedContribution?.status !== 'ACTIVE'}
+                  style={{ 
+                    width: '100%', 
+                    padding: '18px',
+                    fontSize: '17px',
+                    fontWeight: '700',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, var(--navy), var(--navy2))',
+                    boxShadow: '0 6px 24px rgba(0,43,107,0.3)',
+                    transition: 'all 0.2s ease',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    opacity: submitting ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '12px'
+                  }}
+                >
+                  {submitting ? (
+                    <>
+                      <svg 
+                        width="22" 
+                        height="22" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        xmlns="http://www.w3.org/2000/svg"
+                        style={{ animation: 'spin 1s linear infinite' }}
+                      >
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.3" />
+                        <path 
+                          d="M12 2C6.48 2 2 6.48 2 12" 
+                          stroke="currentColor" 
+                          strokeWidth="4" 
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      Starting payment...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={22} />
+                      {selectedInstallment ? `Pay ${Number(selectedInstallment.amount).toLocaleString()} XAF` : 'No installment due'}
+                    </>
+                  )}
+                </button>
+                <p style={{ 
+                  color: 'var(--gray)', 
+                  fontSize: '14px', 
+                  marginTop: '16px',
+                  textAlign: 'center',
+                  lineHeight: 1.6
+                }}>
+                  Access unlocks once the payment provider confirms at least one installment.
+                </p>
+              </>
+            )}
+          </>
+        )}
       </div>
 
-      <section className="alumni-card" style={{ padding: 22, marginBottom: 26 }}>
-        <h2 style={{ margin: '0 0 14px', color: 'var(--navy)' }}>Payment history</h2>
-        {!payments.length ? <p style={{ color: 'var(--gray)', marginBottom: 0 }}>No registration payments yet.</p> : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
-              <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid var(--lgray)' }}>
-                <th style={{ padding: 10 }}>Contribution</th><th style={{ padding: 10 }}>Installment</th><th style={{ padding: 10 }}>Amount</th><th style={{ padding: 10 }}>Date</th><th style={{ padding: 10 }}>Status</th>
-              </tr></thead>
+      {/* Payment History */}
+      <div style={{ 
+        background: '#fff',
+        padding: '32px',
+        borderRadius: '20px',
+        border: '1px solid rgba(0,43,107,0.08)',
+        boxShadow: '0 4px 20px rgba(0,43,107,0.08)',
+        marginBottom: '32px'
+      }}>
+        <h2 style={{ margin: '0 0 24px', color: 'var(--navy)', fontSize: '22px', fontWeight: '800' }}>
+          Payment History
+        </h2>
+        {!payments.length ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '48px 24px',
+            color: 'var(--gray)',
+            background: 'var(--off)',
+            borderRadius: '16px',
+            border: '2px dashed var(--lgray)'
+          }}>
+            <p style={{ marginBottom: 0, fontSize: '15px' }}>No registration payments yet.</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto', borderRadius: '14px', border: '1px solid var(--lgray)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+              <thead>
+                <tr style={{ 
+                  textAlign: 'left', 
+                  borderBottom: '2px solid var(--lgray)',
+                  background: 'var(--off)'
+                }}>
+                  <th style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>Contribution</th>
+                  <th style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>Installment</th>
+                  <th style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>Amount</th>
+                  <th style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>Date</th>
+                  <th style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>Status</th>
+                </tr>
+              </thead>
               <tbody>{payments.map((payment) => (
                 <tr key={payment.id} style={{ borderBottom: '1px solid var(--lgray)' }}>
-                  <td style={{ padding: 10 }}>{payment.contributionTitle}</td>
-                  <td style={{ padding: 10 }}>{payment.installmentLabel || '—'}</td>
-                  <td style={{ padding: 10 }}>{Number(payment.amount).toLocaleString()} XAF</td>
-                  <td style={{ padding: 10 }}>{formatDate(payment.paymentDate || payment.createdAt)}</td>
-                  <td style={{ padding: 10 }}><span className={`status-badge ${String(payment.status || 'PENDING').toLowerCase()}`}>{String(payment.status || 'PENDING').toLowerCase()}</span></td>
+                  <td style={{ padding: '16px 20px', fontSize: '15px', color: 'var(--dark)' }}>{payment.contributionTitle}</td>
+                  <td style={{ padding: '16px 20px', fontSize: '15px', color: 'var(--dark)' }}>{payment.installmentLabel || '—'}</td>
+                  <td style={{ padding: '16px 20px', fontSize: '15px', fontWeight: '700', color: 'var(--navy)' }}>{Number(payment.amount).toLocaleString()} XAF</td>
+                  <td style={{ padding: '16px 20px', fontSize: '15px', color: 'var(--gray)' }}>{formatDate(payment.paymentDate || payment.createdAt)}</td>
+                  <td style={{ padding: '16px 20px' }}><span className={`status-badge ${String(payment.status || 'PENDING').toLowerCase()}`}>{String(payment.status || 'PENDING').toLowerCase()}</span></td>
                 </tr>
               ))}</tbody>
             </table>
           </div>
         )}
-      </section>
+      </div>
 
-      <section className="alumni-card" style={{ padding: 22 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
-          <Users size={20} color="var(--navy)" />
-          <h2 style={{ margin: 0, color: 'var(--navy)' }}>Your batch</h2>
-          <span style={{ color: 'var(--gray)', fontSize: 13 }}>{overview?.members.length || 0} members</span>
+      {/* Batch Members */}
+      <div style={{ 
+        background: '#fff',
+        padding: '32px',
+        borderRadius: '20px',
+        border: '1px solid rgba(0,43,107,0.08)',
+        boxShadow: '0 4px 20px rgba(0,43,107,0.08)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ 
+            width: '56px', 
+            height: '56px', 
+            borderRadius: '14px', 
+            background: 'linear-gradient(135deg, rgba(0,43,107,0.1), rgba(200,150,12,0.1))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Users size={28} color="var(--navy)" />
+          </div>
+          <div>
+            <h2 style={{ margin: 0, color: 'var(--navy)', fontSize: '22px', fontWeight: '800' }}>Your Batch</h2>
+            <span style={{ color: 'var(--gray)', fontSize: '14px', fontWeight: '600' }}>{overview?.members.length || 0} members</span>
+          </div>
         </div>
-        {!overview?.batch && <p style={{ color: 'var(--gray)' }}>Your batch has not been assigned yet.</p>}
-        {overview?.batch && !overview.members.length && <p style={{ color: 'var(--gray)' }}>There are no members in this batch yet.</p>}
+        {!overview?.batch && <p style={{ color: 'var(--gray)', fontSize: '15px' }}>Your batch has not been assigned yet.</p>}
+        {overview?.batch && !overview.members.length && <p style={{ color: 'var(--gray)', fontSize: '15px' }}>There are no members in this batch yet.</p>}
         {!!overview?.members.length && (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
-              <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid var(--lgray)' }}>
-                <th style={{ padding: 10 }}>Member</th><th style={{ padding: 10 }}>Registration</th><th style={{ padding: 10 }}>Membership badge</th>
-              </tr></thead>
+          <div style={{ overflowX: 'auto', borderRadius: '14px', border: '1px solid var(--lgray)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+              <thead>
+                <tr style={{ 
+                  textAlign: 'left', 
+                  borderBottom: '2px solid var(--lgray)',
+                  background: 'var(--off)'
+                }}>
+                  <th style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>Member</th>
+                  <th style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>Registration</th>
+                  <th style={{ padding: '16px 20px', fontSize: '14px', fontWeight: '700', color: 'var(--navy)' }}>Membership badge</th>
+                </tr>
+              </thead>
               <tbody>{overview.members.map((member) => (
                 <tr key={member.id} style={{ borderBottom: '1px solid var(--lgray)' }}>
-                  <td style={{ padding: 10 }}>{member.name}</td>
-                  <td style={{ padding: 10 }}><span className={`status-badge ${member.registrationStatus.toLowerCase()}`}>{member.registrationStatus === 'REGISTERED' ? 'Registered' : 'Pending'}</span></td>
-                  <td style={{ padding: 10 }}><span className={`status-badge ${member.membershipBadge.toLowerCase()}`}>{member.membershipBadge}</span></td>
+                  <td style={{ padding: '16px 20px', fontSize: '15px', color: 'var(--dark)', fontWeight: '600' }}>{member.name}</td>
+                  <td style={{ padding: '16px 20px' }}><span className={`status-badge ${member.registrationStatus.toLowerCase()}`}>{member.registrationStatus === 'REGISTERED' ? 'Registered' : 'Pending'}</span></td>
+                  <td style={{ padding: '16px 20px' }}><span className={`status-badge ${member.membershipBadge.toLowerCase()}`}>{member.membershipBadge}</span></td>
                 </tr>
               ))}</tbody>
             </table>
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
 }

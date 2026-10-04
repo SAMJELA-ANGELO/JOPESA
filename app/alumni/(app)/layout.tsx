@@ -114,7 +114,7 @@ export default function AlumniAppLayout({ children }: { children: React.ReactNod
     <div className="alumni-app" style={{ minHeight: '100vh', display: 'flex', background: 'var(--off)' }}>
       <AlumniSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} registrationPaid={registrationPaid || isSystemAdmin} />
 
-      <div className="alumni-main" style={{ flex: 1, marginLeft: 260, minWidth: 0 }}>
+      <div className="alumni-main" style={{ flex: 1, marginLeft: 260, minWidth: 0, transition: 'margin-left 0.2s ease' }}>
         <header
           className="alumni-topbar"
           style={{
@@ -127,6 +127,7 @@ export default function AlumniAppLayout({ children }: { children: React.ReactNod
             position: 'sticky',
             top: 0,
             zIndex: 50,
+            boxShadow: '0 2px 12px rgba(0,43,107,0.15)'
           }}
         >
           <button
@@ -135,21 +136,24 @@ export default function AlumniAppLayout({ children }: { children: React.ReactNod
               background: 'rgba(255,255,255,0.12)',
               border: 'none',
               color: '#fff',
-              borderRadius: 8,
-              width: 40,
-              height: 40,
+              borderRadius: 10,
+              width: 42,
+              height: 42,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
+              transition: 'background 0.15s'
             }}
             aria-label="Open menu"
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
           >
-            <Menu size={20} />
+            <Menu size={22} />
           </button>
-          <div>
-            <div style={{ fontWeight: 800, color: 'var(--gold2)', fontSize: 15 }}>JOPESA Alumni</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>Member dashboard</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, color: 'var(--gold2)', fontSize: 16, letterSpacing: '0.5px' }}>JOPESA Alumni</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>Member dashboard</div>
           </div>
         </header>
 

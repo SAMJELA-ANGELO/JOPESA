@@ -139,6 +139,7 @@ export default function AlumniSidebar({ open, onClose, registrationPaid }: Alumn
                   fontSize: 14,
                   fontWeight: 600,
                   transition: 'all 0.15s',
+                  minHeight: '44px',
                 }}
               >
                 <Icon size={18} />

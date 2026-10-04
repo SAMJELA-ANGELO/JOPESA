@@ -75,7 +75,7 @@ export default function AlumniEventsPage() {
           return (
             <div
               key={event.id}
-              className="event-card"
+              className="event-card event-card-pulse"
               onClick={() => router.push(`/alumni/events/${event.id}`)}
             >
               <div className="event-card-header">

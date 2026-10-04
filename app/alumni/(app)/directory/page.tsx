@@ -112,30 +112,130 @@ export default function AlumniDirectoryPage() {
   });
 
   return (
-    <div className="directory-page">
-      <div className="directory-header">
-        <div>
-          <h1 className="directory-title">Alumni Directory</h1>
-          <p className="directory-subtitle">Search and connect with fellow JOPESA alumni</p>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%)',
+        borderRadius: '20px',
+        padding: '32px 28px',
+        marginBottom: '24px',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: '0 8px 24px rgba(0,43,107,0.15)'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-10%',
+          width: '300px',
+          height: '300px',
+          background: 'radial-gradient(circle, rgba(200,150,12,0.15) 0%, transparent 70%)',
+          borderRadius: '50%'
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: '-30%',
+          left: '-5%',
+          width: '200px',
+          height: '200px',
+          background: 'radial-gradient(circle, rgba(240,192,64,0.1) 0%, transparent 70%)',
+          borderRadius: '50%'
+        }} />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            marginBottom: '12px'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '16px',
+              background: 'rgba(255,255,255,0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <Search size={28} color="var(--gold2)" />
+            </div>
+            <div>
+              <h1 style={{ 
+                margin: 0, 
+                fontSize: '28px', 
+                fontWeight: 800, 
+                color: '#fff',
+                letterSpacing: '-0.5px'
+              }}>
+                Alumni Directory
+              </h1>
+              <p style={{ 
+                margin: '4px 0 0', 
+                color: 'rgba(255,255,255,0.8)',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}>
+                Search and connect with fellow JOPESA alumni
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="directory-search-bar">
-        <div className="search-input-wrapper">
-          <Search size={18} className="search-icon" />
+      {/* Search and Filters */}
+      <div style={{
+        background: '#fff',
+        borderRadius: '16px',
+        padding: '20px',
+        marginBottom: '24px',
+        border: '1px solid rgba(0,43,107,0.08)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+        display: 'flex',
+        gap: '12px',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ 
+          flex: 1, 
+          minWidth: '250px',
+          position: 'relative'
+        }}>
+          <Search size={18} style={{ 
+            position: 'absolute', 
+            left: '14px', 
+            top: '50%', 
+            transform: 'translateY(-50%)',
+            color: 'var(--gray)'
+          }} />
           <input
             type="text"
             placeholder="Search by name or phone number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
+            style={{
+              width: '100%',
+              padding: '12px 14px 12px 42px',
+              borderRadius: '12px',
+              border: '1.5px solid var(--lgray)',
+              fontSize: '15px',
+              fontWeight: '500',
+              outline: 'none',
+              transition: 'all 0.2s'
+            }}
           />
         </div>
         <HeroSelect
           value={selectedBranch}
           onChange={setSelectedBranch}
           ariaLabel="Filter by chapter"
-          className="filter-select"
+          style={{ 
+            minWidth: '180px',
+            padding: '12px 14px',
+            borderRadius: '12px',
+            border: '1.5px solid var(--lgray)',
+            fontSize: '15px',
+            fontWeight: '500'
+          }}
           placeholder="All Chapters"
           options={[
             { value: '', label: 'All Chapters' },
@@ -146,7 +246,14 @@ export default function AlumniDirectoryPage() {
           value={selectedBadge}
           onChange={setSelectedBadge}
           ariaLabel="Filter by membership status"
-          className="filter-select"
+          style={{ 
+            minWidth: '150px',
+            padding: '12px 14px',
+            borderRadius: '12px',
+            border: '1.5px solid var(--lgray)',
+            fontSize: '15px',
+            fontWeight: '500'
+          }}
           placeholder="All Status"
           options={[
             { value: '', label: 'All Status' },
@@ -159,62 +266,237 @@ export default function AlumniDirectoryPage() {
       </div>
 
       {loading ? (
-        <div className="directory-loading">Loading alumni directory...</div>
+        <div style={{ 
+          minHeight: '80vh', 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center',
+          gap: '16px',
+          color: 'var(--navy)',
+          fontWeight: '600'
+        }}>
+          <div className="loading-spinner" style={{ width: '48px', height: '48px', borderWidth: '4px' }} />
+          <span>Loading alumni directory...</span>
+        </div>
       ) : (
-        <div className="directory-content">
+        <div>
           {filteredMembers.length === 0 ? (
-            <div className="directory-empty">
-              <div className="directory-empty-icon">
-                <Search size={48} />
-              </div>
-              <div className="directory-empty-title">No alumni found</div>
-              <div className="directory-empty-sub">Try adjusting your search or filters</div>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: 64, 
+              color: 'var(--gray)',
+              background: '#fff',
+              borderRadius: '20px',
+              border: '1px solid var(--lgray)'
+            }}>
+              <Search size={48} style={{ color: 'var(--navy)', marginBottom: '16px' }} />
+              <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>No alumni found</p>
+              <p style={{ fontSize: '14px' }}>Try adjusting your search or filters</p>
             </div>
           ) : (
-            <div className="directory-grid">
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+              gap: '16px' 
+            }}>
               {filteredMembers.map((member) => (
                 <div
                   key={member.id || member.user?.id}
-                  className="directory-card"
+                  style={{
+                    background: '#fff',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(0,43,107,0.08)',
+                    padding: '20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.25s',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                  }}
                   onClick={() => router.push(`/alumni/directory/${member.id || member.user?.id}`)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,43,107,0.12)';
+                    e.currentTarget.style.borderColor = 'rgba(0,43,107,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+                    e.currentTarget.style.borderColor = 'rgba(0,43,107,0.08)';
+                  }}
                 >
-                  <div className="directory-card-header">
-                    <div className="directory-avatar">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                    <div style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '14px',
+                      background: 'linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      overflow: 'hidden'
+                    }}>
                       {(member.profileImage || member.user?.profileImage) ? (
-                        <img src={resolveMediaUrl(member.profileImage || member.user.profileImage)} alt={member.user.firstName || 'Alumni member'} />
+                        <img 
+                          src={resolveMediaUrl(member.profileImage || member.user.profileImage)} 
+                          alt={member.user.firstName || 'Alumni member'} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
                       ) : (
-                        <div className="directory-avatar-placeholder">
+                        <span style={{ color: '#fff', fontSize: '22px', fontWeight: '700' }}>
                           {member.user?.firstName?.[0] || '?'}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '700', 
+                        color: 'var(--navy)',
+                        marginBottom: '4px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {member.user?.firstName} {member.user?.lastName}
+                      </div>
+                      {member.membershipBadge && (
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 10px',
+                          borderRadius: '999',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.3px',
+                          background: member.membershipBadge === 'ACTIVE' 
+                            ? 'rgba(4,120,87,0.12)' 
+                            : member.membershipBadge === 'PASSIVE'
+                            ? 'rgba(200,150,12,0.12)'
+                            : 'rgba(107,114,128,0.12)',
+                          color: member.membershipBadge === 'ACTIVE' 
+                            ? '#047857' 
+                            : member.membershipBadge === 'PASSIVE'
+                            ? '#b45309'
+                            : '#6b7280'
+                        }}>
+                          <Shield size={10} />
+                          {member.membershipBadge}
                         </div>
                       )}
                     </div>
-                    <div className="directory-card-info">
-                      <div className="directory-name">
-                        {member.user?.firstName} {member.user?.lastName}
-                      </div>
-                    </div>
-                    {member.membershipBadge && (
-                      <div className={`directory-badge directory-badge-${member.membershipBadge.toLowerCase()}`}>
-                        <Shield size={12} /> {member.membershipBadge}
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {member.relationshipStatus && (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        fontSize: '13px',
+                        color: 'var(--gray)',
+                        fontWeight: '500'
+                      }}>
+                        <Heart size={14} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                        {member.relationshipStatus}
                       </div>
                     )}
-                  </div>
-                  <div className="directory-member-details">
-                    {member.relationshipStatus && <div><Heart size={13} /> {member.relationshipStatus}</div>}
-                    {member.currentRole && <div><Briefcase size={13} /> {member.currentRole}</div>}
-                    {member.currentCompany && <div><Building2 size={13} /> {member.currentCompany}</div>}
-                    {member.user?.phone && <div><Phone size={13} /> {member.user.phone}</div>}
-                    {member.branch?.name && <div><MapPin size={13} /> {member.branch.name}</div>}
+                    {member.currentRole && (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        fontSize: '13px',
+                        color: 'var(--gray)',
+                        fontWeight: '500'
+                      }}>
+                        <Briefcase size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                        {member.currentRole}
+                      </div>
+                    )}
+                    {member.currentCompany && (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        fontSize: '13px',
+                        color: 'var(--gray)',
+                        fontWeight: '500'
+                      }}>
+                        <Building2 size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                        {member.currentCompany}
+                      </div>
+                    )}
+                    {member.user?.phone && (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        fontSize: '13px',
+                        color: 'var(--gray)',
+                        fontWeight: '500'
+                      }}>
+                        <Phone size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                        {member.user.phone}
+                      </div>
+                    )}
+                    {member.branch?.name && (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        fontSize: '13px',
+                        color: 'var(--gray)',
+                        fontWeight: '500'
+                      }}>
+                        <MapPin size={14} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                        {member.branch.name}
+                      </div>
+                    )}
                     {(member.linkedIn || member.website || member.twitter || member.instagram) && (
-                      <div className="directory-member-links">
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '12px',
+                        marginTop: '4px',
+                        paddingTop: '12px',
+                        borderTop: '1px solid var(--lgray)'
+                      }}>
                         {[
                           ['LinkedIn', member.linkedIn],
                           ['Website', member.website],
                           ['X / Twitter', member.twitter],
                           ['Instagram', member.instagram],
                         ].filter((link): link is [string, string] => !!link[1]).map(([label, href]) => (
-                          <a key={label} href={socialProfileUrl(label, href)} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                            <Link2 size={12} /> {label}
+                          <a 
+                            key={label} 
+                            href={socialProfileUrl(label, href)} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            onClick={(event) => event.stopPropagation()}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '12px',
+                              color: 'var(--navy)',
+                              fontWeight: '600',
+                              textDecoration: 'none',
+                              padding: '6px 10px',
+                              borderRadius: '8px',
+                              background: 'rgba(0,43,107,0.06)',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(0,43,107,0.12)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(0,43,107,0.06)';
+                            }}
+                          >
+                            <Link2 size={12} />
+                            {label}
                           </a>
                         ))}
                       </div>

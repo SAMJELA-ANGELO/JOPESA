@@ -114,6 +114,15 @@ export default function AlumniGalleryPage() {
     setPreviewPhoto(galleryItems[nextIndex]);
   }, [galleryItems, previewPhoto]);
 
+  const [previewAnimating, setPreviewAnimating] = useState(false);
+
+  useEffect(() => {
+    if (!previewPhoto) return;
+    setPreviewAnimating(true);
+    const timer = setTimeout(() => setPreviewAnimating(false), 300);
+    return () => clearTimeout(timer);
+  }, [previewPhoto]);
+
   useEffect(() => {
     if (!previewPhoto) return;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -127,7 +136,7 @@ export default function AlumniGalleryPage() {
 
   useEffect(() => {
     if (!slideshowPlaying || galleryItems.length < 2) return;
-    const timer = window.setInterval(() => movePreview(1), 3500);
+    const timer = window.setInterval(() => movePreview(1), 2000);
     return () => window.clearInterval(timer);
   }, [slideshowPlaying, galleryItems.length, movePreview]);
 
@@ -177,84 +186,257 @@ export default function AlumniGalleryPage() {
   };
 
   return (
-    <div className="gallery-page">
-      <div className="page-header">
-        <div className="page-header-icon">
-          <Images size={32} />
-        </div>
-        <div>
-          <h1 className="page-header-title">Gallery</h1>
-          <p className="page-header-subtitle">
-            Event media grouped and sorted by the date each event happened.
-          </p>
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%)',
+        borderRadius: '20px',
+        padding: '36px 32px',
+        marginBottom: '32px',
+        color: '#fff',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,43,107,0.2)'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-20%',
+          width: '400px',
+          height: '400px',
+          background: 'radial-gradient(circle, rgba(200,150,12,0.15) 0%, transparent 70%)',
+          borderRadius: '50%',
+          pointerEvents: 'none'
+        }} />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{
+            width: '72px',
+            height: '72px',
+            borderRadius: '18px',
+            background: 'rgba(200,150,12,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Images size={36} color="var(--gold2)" />
+          </div>
+          <div>
+            <h1 style={{ 
+              fontSize: 'clamp(24px, 4vw, 32px)', 
+              fontWeight: '800', 
+              marginBottom: '8px',
+              letterSpacing: '-0.5px'
+            }}>
+              Photo Gallery
+            </h1>
+            <p style={{ 
+              fontSize: '15px', 
+              color: 'rgba(255,255,255,0.85)',
+              maxWidth: '500px',
+              lineHeight: 1.6
+            }}>
+              Browse and download photos from alumni events
+            </p>
+          </div>
         </div>
       </div>
 
       {loading && (
-        <div className="gallery-loading">
-          <div className="loading-spinner" />
+        <div style={{ 
+          minHeight: '400px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '16px',
+          color: 'var(--navy)',
+          fontWeight: '600'
+        }}>
+          <div className="loading-spinner" style={{ width: '48px', height: '48px', borderWidth: '4px' }} />
           <span>Loading gallery...</span>
         </div>
       )}
       
       {error && (
-        <div className="gallery-error">
+        <div style={{ 
+          padding: '24px 28px',
+          background: 'linear-gradient(135deg, rgba(185,28,28,0.08), rgba(185,28,28,0.04))',
+          border: '2px solid rgba(185,28,28,0.2)',
+          borderRadius: '16px',
+          color: 'var(--err)',
+          fontWeight: '600',
+          fontSize: '15px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '32px'
+        }}>
           <Images size={24} />
           <span>{error}</span>
         </div>
       )}
       
       {!loading && !error && galleryItems.length === 0 && (
-        <div className="gallery-empty">
-          <div className="gallery-empty-icon">
-            <Images size={48} />
+        <div style={{ 
+          padding: '64px 32px',
+          background: 'var(--off)',
+          borderRadius: '20px',
+          border: '2px dashed var(--lgray)',
+          textAlign: 'center',
+          color: 'var(--gray)'
+        }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '20px',
+            background: 'rgba(0,43,107,0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px'
+          }}>
+            <Images size={40} color="var(--navy)" />
           </div>
-          <h3>No photos yet</h3>
-          <p>Photos will appear here after admins upload them or add event media.</p>
+          <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--navy)', marginBottom: '8px' }}>No photos yet</h3>
+          <p style={{ fontSize: '15px', marginBottom: 0 }}>Photos will appear here after admins upload them or add event media.</p>
         </div>
       )}
 
       {!loading && !error && galleryItems.length > 0 && (
         <>
-          <div className="gallery-controls">
-            <div className="gallery-selection-info">
+          {/* Controls */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            padding: '20px 24px',
+            background: '#fff',
+            borderRadius: '16px',
+            marginBottom: '24px',
+            border: '1px solid rgba(0,43,107,0.08)',
+            boxShadow: '0 2px 12px rgba(0,43,107,0.06)',
+            flexWrap: 'wrap',
+            gap: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {selectedPhotos.size > 0 && (
-                <span className="gallery-selected-count">
+                <span style={{
+                  background: 'rgba(200,150,12,0.15)',
+                  color: 'var(--gold)',
+                  padding: '8px 16px',
+                  borderRadius: '999',
+                  fontSize: '14px',
+                  fontWeight: '700'
+                }}>
                   {selectedPhotos.size} selected
                 </span>
               )}
+              <span style={{ fontSize: '15px', color: 'var(--gray)', fontWeight: '600' }}>
+                {galleryItems.length} photos
+              </span>
             </div>
-            <div className="gallery-actions">
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <button
                 onClick={selectAllPhotos}
-                className="gallery-action-btn"
                 disabled={selectedPhotos.size === galleryItems.length}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--lgray)',
+                  background: '#fff',
+                  color: 'var(--navy)',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
               >
                 <CheckSquare size={16} /> Select All
               </button>
               <button
                 onClick={deselectAllPhotos}
-                className="gallery-action-btn"
                 disabled={selectedPhotos.size === 0}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--lgray)',
+                  background: '#fff',
+                  color: 'var(--navy)',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
               >
                 <Square size={16} /> Deselect All
               </button>
               <button
                 onClick={downloadSelectedPhotos}
-                className="gallery-action-btn gallery-action-btn-primary"
                 disabled={selectedPhotos.size === 0}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--navy)',
+                  background: 'var(--navy)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
               >
                 <Download size={16} /> Download Selected
               </button>
               <button
                 onClick={downloadAllPhotos}
-                className="gallery-action-btn gallery-action-btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--navy)',
+                  background: 'var(--navy)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
               >
                 <Download size={16} /> Download All
               </button>
               <button
                 onClick={slideshowPlaying ? () => setSlideshowPlaying(false) : startSlideshow}
-                className="gallery-action-btn gallery-action-btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--navy)',
+                  background: 'var(--navy)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
               >
                 {slideshowPlaying ? <Pause size={16} /> : <Play size={16} />}
                 {slideshowPlaying ? 'Stop slideshow' : 'Start slideshow'}
@@ -262,11 +444,37 @@ export default function AlumniGalleryPage() {
             </div>
           </div>
 
-          {groupedItems.map((group) => (
-            <div key={group.eventId} style={{ marginBottom: 26 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--navy)', margin: '18px 0 12px' }}>{group.eventTitle}</div>
-              <div className="gallery-grid">
-                {group.items.map((photo) => {
+          {/* Gallery Grid */}
+          {groupedItems.map((group, groupIndex) => (
+            <div key={group.eventId} style={{ marginBottom: '40px' }}>
+              <div style={{ 
+                fontSize: '22px', 
+                fontWeight: '800', 
+                color: 'var(--navy)', 
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, var(--navy), var(--navy2))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Images size={20} color="var(--gold2)" />
+                </div>
+                {group.eventTitle}
+              </div>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', 
+                gap: '20px' 
+              }}>
+                {group.items.map((photo, index) => {
                   const title = photo.event?.title || photo.eventTitle || 'Event media';
                   const isVideo = isVideoPhoto(photo);
                   const isSelected = selectedPhotos.has(photo.id);
@@ -274,43 +482,163 @@ export default function AlumniGalleryPage() {
                   return (
                     <div
                       key={photo.id}
-                      className={`gallery-item ${isSelected ? 'gallery-item-selected' : ''}`}
+                      style={{
+                        position: 'relative',
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        background: '#fff',
+                        boxShadow: '0 4px 20px rgba(0,43,107,0.1)',
+                        border: '2px solid transparent',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        cursor: 'pointer',
+                        animation: `galleryItemFadeIn 0.4s ease backwards ${Math.min(index * 50, 300)}ms`
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                        e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,43,107,0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,43,107,0.1)';
+                      }}
                     >
-                      <div className="gallery-item-checkbox">
+                      {isSelected && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '12px',
+                          left: '12px',
+                          zIndex: 10,
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '10px',
+                          background: 'var(--gold)',
+                          border: '2px solid var(--gold)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 2px 8px rgba(200,150,12,0.3)'
+                        }}>
+                          <CheckSquare size={18} color="#fff" />
+                        </div>
+                      )}
+                      
+                      {!isSelected && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             togglePhotoSelection(photo.id);
                           }}
-                          className="gallery-checkbox-btn"
+                          style={{
+                            position: 'absolute',
+                            top: '12px',
+                            left: '12px',
+                            zIndex: 10,
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '10px',
+                            background: 'rgba(255,255,255,0.95)',
+                            border: '2px solid var(--lgray)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            opacity: 0,
+                            transform: 'scale(0.9)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = '0';
+                            e.currentTarget.style.transform = 'scale(0.9)';
+                          }}
                         >
-                          {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                          <Square size={18} color="var(--navy)" />
                         </button>
-                      </div>
-
-                      {isVideo ? (
-                        <video src={photo.url} controls playsInline className="gallery-media" />
-                      ) : (
-                        <img src={photo.url} alt={title} onClick={() => setPreviewPhoto(photo)} className="gallery-media" />
                       )}
 
-                      <div className="gallery-item-info">
-                        <div onClick={() => router.push(`/alumni/events/${photo.eventId || photo.event?.id}`)} className="gallery-item-title">
+                      {isVideo ? (
+                        <video src={photo.url} controls playsInline style={{ width: '100%', height: '200px', objectFit: 'cover', display: 'block' }} />
+                      ) : (
+                        <img 
+                          src={photo.url} 
+                          alt={title} 
+                          onClick={() => setPreviewPhoto(photo)} 
+                          style={{ width: '100%', height: '200px', objectFit: 'cover', display: 'block' }} 
+                        />
+                      )}
+
+                      <div style={{ padding: '16px' }}>
+                        <div 
+                          onClick={() => router.push(`/alumni/events/${photo.eventId || photo.event?.id}`)} 
+                          style={{ 
+                            fontWeight: '700', 
+                            color: 'var(--navy)', 
+                            fontSize: '15px', 
+                            marginBottom: '8',
+                            cursor: 'pointer',
+                            lineHeight: 1.3,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}
+                        >
                           {title}
                         </div>
-                        <div className="gallery-item-date">{formatDate(photo.eventDate || photo.uploadedAt)}</div>
-                        <button type="button" onClick={() => setPreviewPhoto(photo)} className="gallery-download-btn">
-                          <Expand size={14} /> Preview
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadFile(photo.url, getDownloadName(photo));
-                          }}
-                          className="gallery-download-btn"
-                        >
-                          <Download size={14} /> Download
-                        </button>
+                        <div style={{ fontSize: '13px', color: 'var(--gray)', marginBottom: '12' }}>
+                          {formatDate(photo.eventDate || photo.uploadedAt)}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            type="button" 
+                            onClick={() => setPreviewPhoto(photo)} 
+                            style={{
+                              flex: 1,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--lgray)',
+                              background: 'var(--off)',
+                              color: 'var(--navy)',
+                              fontSize: '13px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <Expand size={14} /> Preview
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadFile(photo.url, getDownloadName(photo));
+                            }}
+                            style={{
+                              flex: 1,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--lgray)',
+                              background: 'var(--off)',
+                              color: 'var(--navy)',
+                              fontSize: '13px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <Download size={14} /> Download
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -322,20 +650,114 @@ export default function AlumniGalleryPage() {
       )}
 
       {previewPhoto && (
-        <div className="gallery-preview-backdrop" role="dialog" aria-modal="true" aria-label={`${previewPhoto.eventTitle || 'Event media'} preview`} onClick={() => { setPreviewPhoto(null); setSlideshowPlaying(false); }}>
-          <div className="gallery-preview-panel" onClick={(event) => event.stopPropagation()}>
-            <div className="gallery-preview-header">
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 3000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            background: 'rgba(8,16,30,0.95)',
+            backdropFilter: 'blur(4px)',
+            animation: 'fadeIn 0.3s ease'
+          }}
+          role="dialog" 
+          aria-modal="true" 
+          aria-label={`${previewPhoto.eventTitle || 'Event media'} preview`} 
+          onClick={() => { setPreviewPhoto(null); setSlideshowPlaying(false); }}
+        >
+          <div 
+            style={{
+              width: 'min(1000px, 100%)',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              padding: '20px',
+              background: '#fff',
+              borderRadius: '20px',
+              boxShadow: '0 20px 70px rgba(0,0,0,0.4)',
+              animation: 'slideUp 0.3s ease'
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
               <div>
-                <h2>{previewPhoto.event?.title || previewPhoto.eventTitle || 'Event media'}</h2>
-                <button type="button" onClick={() => router.push(`/alumni/events/${previewPhoto.eventId || previewPhoto.event?.id}`)} className="gallery-preview-event-link">View event details</button>
+                <h2 style={{ margin: 0, color: 'var(--navy)', fontSize: '18px', fontWeight: '800' }}>
+                  {previewPhoto.event?.title || previewPhoto.eventTitle || 'Event media'}
+                </h2>
+                <button 
+                  type="button" 
+                  onClick={() => router.push(`/alumni/events/${previewPhoto.eventId || previewPhoto.event?.id}`)} 
+                  style={{ 
+                    padding: '4px 0', 
+                    border: 'none', 
+                    background: 'none', 
+                    color: 'var(--gray)', 
+                    font: 'inherit', 
+                    fontSize: '13px', 
+                    cursor: 'pointer',
+                    textDecoration: 'none'
+                  }}
+                >
+                  View event details
+                </button>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" onClick={toggleFullscreen} aria-label="View fullscreen" className="gallery-preview-close"><Maximize2 size={18} /></button>
-                <button type="button" onClick={() => { setPreviewPhoto(null); setSlideshowPlaying(false); }} aria-label="Close preview" className="gallery-preview-close"><X size={20} /></button>
+              <div style={{ display: 'flex', gap: '8' }}>
+                <button 
+                  type="button" 
+                  onClick={toggleFullscreen} 
+                  aria-label="View fullscreen" 
+                  style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    display: 'grid', 
+                    placeItems: 'center', 
+                    border: '1px solid var(--lgray)', 
+                    borderRadius: '10px', 
+                    background: '#fff', 
+                    color: 'var(--navy)', 
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Maximize2 size={18} />
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => { setPreviewPhoto(null); setSlideshowPlaying(false); }} 
+                  aria-label="Close preview" 
+                  style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    display: 'grid', 
+                    placeItems: 'center', 
+                    border: '1px solid var(--lgray)', 
+                    borderRadius: '10px', 
+                    background: '#fff', 
+                    color: 'var(--navy)', 
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <X size={20} />
+                </button>
               </div>
             </div>
             <div
-              className="gallery-preview-stage"
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '200px',
+                background: '#050505',
+                borderRadius: '14px',
+                overflow: 'hidden',
+                touchAction: 'pan-y'
+              }}
               onTouchStart={(event) => setTouchStartX(event.touches[0].clientX)}
               onTouchEnd={(event) => {
                 if (touchStartX === null) return;
@@ -344,23 +766,131 @@ export default function AlumniGalleryPage() {
                 setTouchStartX(null);
               }}
             >
-              <button type="button" onClick={() => movePreview(-1)} aria-label="Previous media" className="gallery-preview-nav gallery-preview-prev"><ChevronLeft size={24} /></button>
+              <button 
+                type="button" 
+                onClick={() => movePreview(-1)} 
+                aria-label="Previous media" 
+                style={{
+                  position: 'absolute',
+                  zIndex: 2,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '48px',
+                  height: '52px',
+                  border: 0,
+                  borderRadius: '12px',
+                  background: 'rgba(0,0,0,0.7)',
+                  color: '#fff',
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                  left: '12px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <ChevronLeft size={28} />
+              </button>
               {isVideoPhoto(previewPhoto) ? (
-                <video ref={(node) => { previewMediaRef.current = node; }} src={previewPhoto.url} controls autoPlay playsInline className="gallery-preview-media" />
+                <video 
+                  ref={(node) => { previewMediaRef.current = node; }} 
+                  src={previewPhoto.url} 
+                  controls 
+                  autoPlay 
+                  playsInline 
+                  style={{ 
+                    display: 'block', 
+                    width: '100%', 
+                    maxHeight: 'calc(90vh - 180px)', 
+                    objectFit: 'contain', 
+                    background: '#050505',
+                    opacity: previewAnimating ? 0.5 : 1, 
+                    transition: 'opacity 0.3s ease' 
+                  }}
+                />
               ) : (
-                <img ref={(node) => { previewMediaRef.current = node; }} src={previewPhoto.url} alt={previewPhoto.event?.title || previewPhoto.eventTitle || 'Event photo'} className="gallery-preview-media" />
+                <img 
+                  ref={(node) => { previewMediaRef.current = node; }} 
+                  src={previewPhoto.url} 
+                  alt={previewPhoto.event?.title || previewPhoto.eventTitle || 'Event photo'} 
+                  style={{ 
+                    display: 'block', 
+                    width: '100%', 
+                    maxHeight: 'calc(90vh - 180px)', 
+                    objectFit: 'contain', 
+                    background: '#050505',
+                    opacity: previewAnimating ? 0.5 : 1, 
+                    transition: 'opacity 0.3s ease' 
+                  }}
+                />
               )}
-              <button type="button" onClick={() => movePreview(1)} aria-label="Next media" className="gallery-preview-nav gallery-preview-next"><ChevronRight size={24} /></button>
+              <button 
+                type="button" 
+                onClick={() => movePreview(1)} 
+                aria-label="Next media" 
+                style={{
+                  position: 'absolute',
+                  zIndex: 2,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '48px',
+                  height: '52px',
+                  border: 0,
+                  borderRadius: '12px',
+                  background: 'rgba(0,0,0,0.7)',
+                  color: '#fff',
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                  right: '12px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <ChevronRight size={28} />
+              </button>
             </div>
-            <div className="gallery-preview-actions">
-              <span style={{ marginRight: 'auto', color: 'var(--gray)', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
+              <span style={{ marginRight: 'auto', color: 'var(--gray)', fontSize: '14px', fontWeight: '600' }}>
                 {galleryItems.findIndex((photo) => photo.id === previewPhoto.id) + 1} / {galleryItems.length}
               </span>
-              <button type="button" onClick={slideshowPlaying ? () => setSlideshowPlaying(false) : () => setSlideshowPlaying(true)} className="gallery-action-btn">
+              <button 
+                type="button" 
+                onClick={slideshowPlaying ? () => setSlideshowPlaying(false) : () => setSlideshowPlaying(true)} 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--lgray)',
+                  background: '#fff',
+                  color: 'var(--navy)',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
                 {slideshowPlaying ? <Pause size={16} /> : <Play size={16} />}
                 {slideshowPlaying ? 'Pause' : 'Slideshow'}
               </button>
-              <button type="button" onClick={() => downloadFile(previewPhoto.url, getDownloadName(previewPhoto))} className="gallery-action-btn gallery-action-btn-primary">
+              <button 
+                type="button" 
+                onClick={() => downloadFile(previewPhoto.url, getDownloadName(previewPhoto))} 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--navy)',
+                  background: 'var(--navy)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
                 <Download size={16} /> Download
               </button>
             </div>
